@@ -107,6 +107,14 @@ python -m app.utils.seed_data
 uvicorn app.main:app --reload --port 8000
 ```
 
+Run the backend test suite with the development dependencies:
+
+```bash
+cd backend
+pip install -r requirements-dev.txt
+pytest -q
+```
+
 **Frontend:**
 
 ```bash

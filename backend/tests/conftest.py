@@ -6,8 +6,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.database import Base, get_db
-from app.dependencies import get_current_user
+from app.database import Base
+from app.dependencies import get_current_user, get_db
 from app.models.user import Role, User
 from app.services.auth_service import hash_password, create_access_token
 

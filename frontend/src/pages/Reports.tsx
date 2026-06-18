@@ -1,10 +1,9 @@
 import { useState, useRef } from "react";
-import { Download, Upload, FileText, FileSpreadsheet, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Download, FileText, FileSpreadsheet, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { exportApi, uploadApi, aiApi } from "@/api/endpoints";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { ImportSummary, AIResponse } from "@/types";
 
 type ExportType = "sales" | "customers" | "inventory" | "report";
