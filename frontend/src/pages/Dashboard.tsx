@@ -190,7 +190,7 @@ export default function Dashboard() {
                 {recentOrders.length === 0 ? (
                   <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No recent orders</TableCell></TableRow>
                 ) : recentOrders.map((o) => (
-                  <TableRow key={o.id}>
+                  <TableRow key={o.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate("/orders")}>
                     <TableCell className="font-medium">#{o.id}</TableCell>
                     <TableCell>{o.customer_name}</TableCell>
                     <TableCell>{new Date(o.order_date).toLocaleDateString()}</TableCell>
@@ -232,7 +232,7 @@ export default function Dashboard() {
               {topCustomers.length === 0 ? (
                 <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">No data</TableCell></TableRow>
               ) : topCustomers.map((c) => (
-                <TableRow key={c.customer_id}>
+                <TableRow key={c.customer_id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate("/customers")}>
                   <TableCell className="font-medium">{c.customer_name}</TableCell>
                   <TableCell className="text-right">{fmt(c.total_spending)}</TableCell>
                   <TableCell className="text-right">{c.order_count}</TableCell>
