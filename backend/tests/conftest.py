@@ -6,14 +6,14 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.database import Base, get_db
-from app.dependencies import get_current_user
+from app.database import Base
+from app.dependencies import get_current_user, get_db
 from app.models.user import Role, User
 from app.services.auth_service import hash_password, create_access_token
 
 
-# In-memory SQLite for tests
-TEST_DATABASE_URL = "sqlite:///./test.db"
+# In-memory SQLite for tests (shared cache so all connections see the same data)
+TEST_DATABASE_URL = "sqlite:///file::memory:?cache=shared&uri=true"
 
 engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False})
 TestSession = sessionmaker(autocommit=False, autoflush=False, bind=engine)

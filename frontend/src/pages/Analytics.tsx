@@ -11,7 +11,7 @@ import type {
 } from "@/types";
 
 const fmt = (v: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(v);
-const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
+const pct = (v: number) => `${v.toFixed(1)}%`;
 
 export default function Analytics() {
   const [loading, setLoading] = useState(true);

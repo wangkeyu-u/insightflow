@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import and_
 from sqlalchemy.orm import Session, joinedload
 
@@ -27,6 +27,8 @@ class AuditLogCreate(BaseModel):
 
 class AuditLogResponse(BaseModel):
     """Schema for audit log responses."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     user_id: int
     user_email: Optional[str] = None
@@ -36,9 +38,6 @@ class AuditLogResponse(BaseModel):
     details: Optional[str] = None
     ip_address: Optional[str] = None
     timestamp: datetime
-
-    class Config:
-        from_attributes = True
 
 
 @router.get("", response_model=List[AuditLogResponse])

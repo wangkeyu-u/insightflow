@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -49,7 +49,7 @@ def log_action(
         entity_id=entity_id,
         details=details,
         ip_address=ip_address,
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(timezone.utc),
     )
     db.add(log_entry)
     db.commit()
