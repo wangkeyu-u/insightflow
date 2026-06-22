@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Search, Loader2, Pencil, Trash2, Eye, X } from "lucide-react";
-import { customersApi } from "@/api/endpoints";
+import { Plus, Search, Loader2, Pencil, Trash2, Eye, X, CheckSquare, Square } from "lucide-react";
+import { customersApi, batchApi } from "@/api/endpoints";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,19 @@ export default function Customers() {
   const [form, setForm] = useState<FormData>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [batchDeleting, setBatchDeleting] = useState(false);
+
+  const handleBatchDelete = async () => {
+    if (!confirm(`Delete ${selected.size} selected customers?`)) return;
+    setBatchDeleting(true);
+    try {
+      await batchApi.deleteCustomers(Array.from(selected));
+      setSelected(new Set());
+      fetch();
+    } catch (e) { console.error(e); }
+    setBatchDeleting(false);
+  };
   const [viewCustomer, setViewCustomer] = useState<Customer | null>(null);
   const [viewOrders, setViewOrders] = useState<OrderListItem[]>([]);
 
@@ -118,21 +131,50 @@ export default function Customers() {
         </CardContent>
       </Card>
 
+      {/* Batch action bar */}
+      {selected.size > 0 && (
+        <div className="flex items-center gap-3 rounded-lg border bg-blue-50 p-3">
+          <span className="text-sm font-medium">{selected.size} selected</span>
+          <Button variant="destructive" size="sm" disabled={batchDeleting} onClick={handleBatchDelete}>
+            {batchDeleting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1 h-4 w-4" />}
+            Delete Selected
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setSelected(new Set())}>Clear Selection</Button>
+        </div>
+      )}
+
       <Card>
         <CardContent className="p-0">
           {loading ? <div className="flex h-32 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div> : (
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[40px]">
+                    <button onClick={() => {
+                      if (selected.size === items.length) setSelected(new Set());
+                      else setSelected(new Set(items.map(c => c.id)));
+                    }}>
+                      {selected.size === items.length && items.length > 0 ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+                    </button>
+                  </TableHead>
                   <TableHead>Name</TableHead><TableHead>Company</TableHead><TableHead>Email</TableHead><TableHead>Phone</TableHead>
                   <TableHead>Region</TableHead><TableHead>Type</TableHead><TableHead className="text-right">Spending</TableHead><TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {items.length === 0 ? (
-                  <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">No customers found</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">No customers found</TableCell></TableRow>
                 ) : items.map((c) => (
                   <TableRow key={c.id}>
+                    <TableCell>
+                      <button onClick={() => {
+                        const next = new Set(selected);
+                        next.has(c.id) ? next.delete(c.id) : next.add(c.id);
+                        setSelected(next);
+                      }}>
+                        {selected.has(c.id) ? <CheckSquare className="h-4 w-4 text-blue-600" /> : <Square className="h-4 w-4 text-muted-foreground" />}
+                      </button>
+                    </TableCell>
                     <TableCell className="font-medium">{c.name}</TableCell>
                     <TableCell>{c.company || "—"}</TableCell>
                     <TableCell>{c.email || "—"}</TableCell>

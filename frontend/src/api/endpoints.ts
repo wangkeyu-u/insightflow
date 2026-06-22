@@ -286,6 +286,9 @@ export const exportApi = {
 
   businessReportPDF: () =>
     client.get("/export/business-report.pdf", { responseType: "blob" }),
+
+  orderPDF: (id: number) =>
+    client.get(`/export/orders/${id}.pdf`, { responseType: "blob" }),
 };
 
 // ====== Audit Logs ======
@@ -300,4 +303,16 @@ export const auditLogsApi = {
     limit?: number;
   }) =>
     client.get<PaginatedResponse<AuditLog>>("/audit-logs", { params }),
+};
+
+// ====== Batch Operations ======
+export const batchApi = {
+  deleteOrders: (ids: number[]) =>
+    client.post<{ deleted: number; failed: number; errors: string[] }>("/batch/orders/delete", { ids }),
+
+  deleteCustomers: (ids: number[]) =>
+    client.post<{ deleted: number; failed: number; errors: string[] }>("/batch/customers/delete", { ids }),
+
+  deleteProducts: (ids: number[]) =>
+    client.post<{ deleted: number; failed: number; errors: string[] }>("/batch/products/delete", { ids }),
 };

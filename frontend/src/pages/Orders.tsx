@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Search, Loader2, Eye, Pencil, Trash2, X } from "lucide-react";
-import { ordersApi } from "@/api/endpoints";
+import { Plus, Search, Loader2, Eye, Pencil, Trash2, X, CheckSquare, Square, Download } from "lucide-react";
+import { ordersApi, batchApi, exportApi } from "@/api/endpoints";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +48,34 @@ export default function Orders() {
   const [editDialog, setEditDialog] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+
+  // Batch selection
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [batchDeleting, setBatchDeleting] = useState(false);
+
+  const handleBatchDelete = async () => {
+    if (!confirm(`Delete ${selected.size} selected orders?`)) return;
+    setBatchDeleting(true);
+    try {
+      await batchApi.deleteOrders(Array.from(selected));
+      setSelected(new Set());
+      fetchOrders();
+    } catch (e) { console.error(e); }
+    setBatchDeleting(false);
+  };
+
+  const handleDownloadPDF = async (id: number) => {
+    try {
+      const res = await exportApi.orderPDF(id);
+      const blob = new Blob([res.data as unknown as BlobPart], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `order-${id}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) { console.error("PDF download failed:", e); }
+  };
 
   // Create/Edit form state
   const [formCustomerId, setFormCustomerId] = useState("");
@@ -224,6 +252,18 @@ export default function Orders() {
         </CardContent>
       </Card>
 
+      {/* Batch action bar */}
+      {selected.size > 0 && (
+        <div className="flex items-center gap-3 rounded-lg border bg-blue-50 p-3">
+          <span className="text-sm font-medium">{selected.size} selected</span>
+          <Button variant="destructive" size="sm" disabled={batchDeleting} onClick={handleBatchDelete}>
+            {batchDeleting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1 h-4 w-4" />}
+            Delete Selected
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setSelected(new Set())}>Clear Selection</Button>
+        </div>
+      )}
+
       {/* Table */}
       <Card>
         <CardContent className="p-0">
@@ -233,6 +273,14 @@ export default function Orders() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[40px]">
+                    <button onClick={() => {
+                      if (selected.size === orders.length) setSelected(new Set());
+                      else setSelected(new Set(orders.map(o => o.id)));
+                    }}>
+                      {selected.size === orders.length && orders.length > 0 ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+                    </button>
+                  </TableHead>
                   <TableHead>ID</TableHead><TableHead>Customer</TableHead><TableHead>Date</TableHead>
                   <TableHead>Region</TableHead><TableHead>Salesperson</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
@@ -241,9 +289,18 @@ export default function Orders() {
               </TableHeader>
               <TableBody>
                 {orders.length === 0 ? (
-                  <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">No orders found</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">No orders found</TableCell></TableRow>
                 ) : orders.map((o) => (
                   <TableRow key={o.id}>
+                    <TableCell>
+                      <button onClick={() => {
+                        const next = new Set(selected);
+                        next.has(o.id) ? next.delete(o.id) : next.add(o.id);
+                        setSelected(next);
+                      }}>
+                        {selected.has(o.id) ? <CheckSquare className="h-4 w-4 text-blue-600" /> : <Square className="h-4 w-4 text-muted-foreground" />}
+                      </button>
+                    </TableCell>
                     <TableCell className="font-medium">#{o.id}</TableCell>
                     <TableCell>{o.customer_name || "—"}</TableCell>
                     <TableCell>{new Date(o.order_date).toLocaleDateString()}</TableCell>
@@ -280,7 +337,14 @@ export default function Orders() {
       {/* View Dialog */}
       <Dialog open={!!viewOrder} onOpenChange={() => setViewOrder(null)}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Order #{viewOrder?.id}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Order #{viewOrder?.id}</DialogTitle>
+              <Button variant="outline" size="sm" onClick={() => viewOrder && handleDownloadPDF(viewOrder.id)}>
+                <Download className="mr-1 h-4 w-4" /> PDF
+              </Button>
+            </div>
+          </DialogHeader>
           {viewOrder && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-2 text-sm">

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import ReactECharts from "echarts-for-react";
 import {
   DollarSign,
@@ -49,6 +50,7 @@ export default function Dashboard() {
   const [regionPerf, setRegionPerf] = useState<RegionPerformance[]>([]);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [alerts, setAlerts] = useState<DashboardAlert[]>([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const load = async () => {
@@ -87,12 +89,12 @@ export default function Dashboard() {
   }
 
   const kpis = [
-    { title: "Total Revenue", value: summary ? fmt(summary.total_revenue) : "$0", icon: DollarSign, color: "text-green-600", bg: "bg-green-50" },
-    { title: "Total Orders", value: summary ? fmtN(summary.total_orders) : "0", icon: ShoppingCart, color: "text-blue-600", bg: "bg-blue-50" },
-    { title: "Total Customers", value: summary ? fmtN(summary.total_customers) : "0", icon: Users, color: "text-purple-600", bg: "bg-purple-50" },
-    { title: "Total Products", value: summary ? fmtN(summary.total_products) : "0", icon: Package, color: "text-orange-600", bg: "bg-orange-50" },
-    { title: "Overdue Amount", value: summary ? fmt(summary.overdue_amount) : "$0", icon: AlertTriangle, color: summary && summary.overdue_amount > 0 ? "text-red-600" : "text-gray-400", bg: summary && summary.overdue_amount > 0 ? "bg-red-50" : "bg-gray-50" },
-    { title: "Low Stock", value: summary ? fmtN(summary.low_stock_count) : "0", icon: TrendingDown, color: summary && summary.low_stock_count > 0 ? "text-red-600" : "text-gray-400", bg: summary && summary.low_stock_count > 0 ? "bg-red-50" : "bg-gray-50" },
+    { title: "Total Revenue", value: summary ? fmt(summary.total_revenue) : "$0", icon: DollarSign, color: "text-green-600", bg: "bg-green-50", path: "/analytics" },
+    { title: "Total Orders", value: summary ? fmtN(summary.total_orders) : "0", icon: ShoppingCart, color: "text-blue-600", bg: "bg-blue-50", path: "/orders" },
+    { title: "Total Customers", value: summary ? fmtN(summary.total_customers) : "0", icon: Users, color: "text-purple-600", bg: "bg-purple-50", path: "/customers" },
+    { title: "Total Products", value: summary ? fmtN(summary.total_products) : "0", icon: Package, color: "text-orange-600", bg: "bg-orange-50", path: "/products" },
+    { title: "Overdue Amount", value: summary ? fmt(summary.overdue_amount) : "$0", icon: AlertTriangle, color: summary && summary.overdue_amount > 0 ? "text-red-600" : "text-gray-400", bg: summary && summary.overdue_amount > 0 ? "bg-red-50" : "bg-gray-50", path: "/orders?payment=overdue" },
+    { title: "Low Stock", value: summary ? fmtN(summary.low_stock_count) : "0", icon: TrendingDown, color: summary && summary.low_stock_count > 0 ? "text-red-600" : "text-gray-400", bg: summary && summary.low_stock_count > 0 ? "bg-red-50" : "bg-gray-50", path: "/inventory" },
   ];
 
   const trendOpt = {
@@ -137,7 +139,7 @@ export default function Dashboard() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {kpis.map((k) => (
-          <Card key={k.title}>
+          <Card key={k.title} className="cursor-pointer transition-shadow hover:shadow-md" onClick={() => navigate(k.path || "/")}>
             <CardContent className="flex items-center gap-3 p-4">
               <div className={`rounded-lg p-2 ${k.bg}`}>
                 <k.icon className={`h-5 w-5 ${k.color}`} />
@@ -154,22 +156,22 @@ export default function Dashboard() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base">Revenue Trend</CardTitle></CardHeader>
-          <CardContent><ReactECharts option={trendOpt} style={{ height: 300 }} /></CardContent>
+          <CardContent><ReactECharts option={trendOpt} style={{ height: 300 }} onEvents={{ click: () => navigate("/orders") }} /></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base">Payment Status</CardTitle></CardHeader>
-          <CardContent><ReactECharts option={pieOpt} style={{ height: 300 }} /></CardContent>
+          <CardContent><ReactECharts option={pieOpt} style={{ height: 300 }} onEvents={{ click: (p: Record<string, string>) => navigate(`/orders?payment=${encodeURIComponent(p.name || "")}`) }} /></CardContent>
         </Card>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base">Top Products by Revenue</CardTitle></CardHeader>
-          <CardContent><ReactECharts option={prodOpt} style={{ height: 300 }} /></CardContent>
+          <CardContent><ReactECharts option={prodOpt} style={{ height: 300 }} onEvents={{ click: () => navigate("/products") }} /></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base">Regional Performance</CardTitle></CardHeader>
-          <CardContent><ReactECharts option={regOpt} style={{ height: 300 }} /></CardContent>
+          <CardContent><ReactECharts option={regOpt} style={{ height: 300 }} onEvents={{ click: (p: Record<string, string>) => navigate(`/customers?region=${encodeURIComponent(p.name || "")}`) }} /></CardContent>
         </Card>
       </div>
 

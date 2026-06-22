@@ -330,6 +330,154 @@ def export_business_report_pdf(
     )
 
 
+@router.get("/orders/{order_id}.pdf")
+def export_order_pdf(
+    order_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Generate a PDF invoice/detail for a specific order."""
+    from fastapi import HTTPException
+
+    order = (
+        db.query(Order)
+        .options(joinedload(Order.customer), joinedload(Order.items).joinedload(OrderItem.product))
+        .filter(Order.id == order_id)
+        .first()
+    )
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    customer_name = order.customer.name if order.customer else "Unknown"
+
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.units import mm
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.lib import colors
+    except ImportError:
+        return _generate_fallback_order_pdf(order, customer_name)
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=20 * mm, bottomMargin=20 * mm)
+    styles = getSampleStyleSheet()
+    elements = []
+
+    # Title
+    elements.append(Paragraph(f"Order #{order.id}", styles["Title"]))
+    elements.append(Spacer(1, 8 * mm))
+
+    # Order info
+    info_data = [
+        ["Order Date:", order.order_date.strftime("%Y-%m-%d") if order.order_date else "N/A"],
+        ["Customer:", customer_name],
+        ["Region:", order.region or "N/A"],
+        ["Salesperson:", order.salesperson or "N/A"],
+        ["Payment Status:", order.payment_status],
+        ["Shipment Status:", order.shipment_status],
+    ]
+    info_table = Table(info_data, colWidths=[120, 300])
+    info_table.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+    ]))
+    elements.append(info_table)
+    elements.append(Spacer(1, 8 * mm))
+
+    # Line items
+    elements.append(Paragraph("Line Items", styles["Heading2"]))
+    elements.append(Spacer(1, 4 * mm))
+
+    item_data = [["Product", "Qty", "Unit Price", "Total"]]
+    total = 0.0
+    for item in order.items:
+        product_name = item.product.name if item.product else f"Product #{item.product_id}"
+        line_total = item.quantity * item.unit_price
+        item_data.append([
+            product_name[:40],
+            str(item.quantity),
+            f"${item.unit_price:.2f}",
+            f"${line_total:.2f}",
+        ])
+        total += line_total
+    item_data.append(["", "", "Total:", f"${total:.2f}"])
+
+    item_table = Table(item_data, colWidths=[200, 60, 80, 80])
+    item_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1e293b")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ("FONTNAME", (-2, -1), (-1, -1), "Helvetica-Bold"),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+    ]))
+    elements.append(item_table)
+
+    doc.build(elements)
+    buffer.seek(0)
+
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="order-{order_id}.pdf"'},
+    )
+
+
+def _generate_fallback_order_pdf(order, customer_name):
+    """Minimal PDF fallback for a single order."""
+    lines = [
+        f"Order #{order.id}",
+        f"Date: {order.order_date.isoformat() if order.order_date else 'N/A'}",
+        f"Customer: {customer_name}",
+        f"Region: {order.region or 'N/A'}",
+        f"Payment: {order.payment_status}",
+        f"Shipment: {order.shipment_status}",
+        "",
+        "Items:",
+    ]
+    total = 0.0
+    for item in order.items:
+        line_total = item.quantity * item.unit_price
+        lines.append(f"  Product #{item.product_id} x{item.quantity} @ ${item.unit_price:.2f} = ${line_total:.2f}")
+        total += line_total
+    lines.append(f"  Total: ${total:.2f}")
+
+    text_content = "\n".join(lines)
+
+    pdf_lines = ["%PDF-1.4"]
+    pdf_lines.append("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj")
+    pdf_lines.append("2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj")
+    pdf_lines.append("3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792]\n   /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>\nendobj")
+
+    stream_parts = ["BT", "/F1 10 Tf"]
+    y_pos = 750
+    for line in lines:
+        safe_line = line.replace("(", "\\(").replace(")", "\\)")
+        stream_parts.append(f"1 0 0 1 50 {y_pos} Tm")
+        stream_parts.append(f"({safe_line}) Tj")
+        y_pos -= 16
+    stream_parts.append("ET")
+    stream_content = "\n".join(stream_parts)
+
+    pdf_lines.append(f"4 0 obj\n<< /Length {len(stream_content)} >>\nstream\n{stream_content}\nendstream\nendobj")
+    pdf_lines.append("5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj")
+
+    pdf_lines.append("xref\n0 6\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \n0000000115 00000 n \n0000000266 00000 n \n0000000800 00000 n \n")
+    pdf_lines.append("trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n900\n%%EOF")
+
+    pdf_bytes = "\n".join(pdf_lines).encode("latin-1")
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="order-{order.id}.pdf"'},
+    )
+
+
 def _generate_fallback_pdf(db: Session):
     """Generate a minimal valid PDF without reportlab as a fallback."""
     # Gather basic stats

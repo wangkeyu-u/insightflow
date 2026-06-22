@@ -10,6 +10,7 @@ from app.routers import (
     analytics,
     audit_logs,
     auth,
+    batch,
     customers,
     dashboard,
     export,
@@ -62,6 +63,7 @@ app.include_router(analytics.router)
 app.include_router(ai.router)
 app.include_router(export.router)
 app.include_router(audit_logs.router)
+app.include_router(batch.router)
 
 
 # ---------------------------------------------------------------------------
