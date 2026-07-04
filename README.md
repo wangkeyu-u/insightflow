@@ -1,6 +1,10 @@
 # InsightFlow — Enterprise Operations Analytics & AI Automation Platform
 
-A full-stack enterprise analytics platform for managing sales, customers, products, inventory, payments, and business reports with an AI-powered business analyst assistant.
+![InsightFlow hero](docs/assets/readme-hero.png)
+
+Enterprise operations analytics in one dashboard. InsightFlow brings sales, customers, products, inventory, payments, reports, audit logs, and an AI business analyst into a single full-stack platform.
+
+**Built for:** KPI dashboards, CSV import, business reporting, operational analytics, AI-assisted decisions.
 
 ## Tech Stack
 
