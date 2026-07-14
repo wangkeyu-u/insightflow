@@ -1,3 +1,23 @@
+# InsightFlow — 企业运营分析与 AI 自动化平台 / Enterprise Operations Analytics & AI Platform
+
+> 企业运营一站式看板 —— 销售、客户、产品、库存、支付、报表、审计日志、AI 经营分析师。
+>
+> Enterprise operations in one dashboard — sales, customers, products, inventory, payments, reports, audit logs, and an AI business analyst.
+
+[![Frontend](https://img.shields.io/badge/Frontend-React%2018%20%2B%20TS-61DAFB)](https://react.dev/)
+[![Backend](https://img.shields.io/badge/Backend-FastAPI-009688)](https://fastapi.tiangolo.com/)
+[![Database](https://img.shields.io/badge/Database-PostgreSQL%2016-336791)](https://www.postgresql.org/)
+[![AI](https://img.shields.io/badge/AI-GPT--4o--mini-412991)](https://openai.com/)
+[![Deploy](https://img.shields.io/badge/Deploy-Docker%20Compose-2496ED)](https://docs.docker.com/compose/)
+
+---
+
+## 项目简介（中文）
+
+InsightFlow 是一个企业运营分析全栈平台，将销售、客户、产品、库存、支付、报表、审计日志和 AI 经营分析师整合到一个看板中。功能包括：JWT 认证与角色权限（管理员/经理/员工）、KPI 仪表盘、订单全生命周期 CRUD、CSV 批量导入、营收增长与客户复购分析、AI 自然语言业务问答与自动报告生成、CSV/PDF 导出、完整审计日志。后端 14 张表，11 个路由模块；前端 React 18 + TypeScript + TailwindCSS + shadcn/ui + ECharts。
+
+---
+
 # InsightFlow — Enterprise Operations Analytics & AI Automation Platform
 
 ![InsightFlow hero](docs/assets/readme-hero.png)
