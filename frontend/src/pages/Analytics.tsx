@@ -174,7 +174,7 @@ export default function Analytics() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <div className="h-2 w-24 rounded-full bg-gray-200">
-                          <div className="h-2 rounded-full bg-blue-500" style={{ width: `${Math.min(100, t.completion_rate * 100)}%` }} />
+                          <div className="h-2 rounded-full bg-blue-500" style={{ width: `${Math.min(100, t.completion_rate)}%` }} />
                         </div>
                         <span className="text-xs">{pct(t.completion_rate)}</span>
                       </div>

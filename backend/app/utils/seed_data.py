@@ -4,11 +4,16 @@ InsightFlow seed data generator.
 Run from the backend directory with:
     python -m app.utils.seed_data
 
-Creates realistic demo data for development and testing purposes.
+Creates deterministic, business-consistent showcase data for development,
+testing, and product walkthroughs.
 """
 
+import argparse
+import calendar
+import json
 import random
 import uuid
+from collections import defaultdict
 from datetime import date, datetime, timedelta
 from typing import List
 
@@ -24,7 +29,7 @@ from app.models.customer import Customer
 from app.models.product import Product, Supplier
 from app.models.order import Order, OrderItem
 from app.models.inventory import Inventory, Payment, Shipment
-from app.models.audit_log import SalesTarget
+from app.models.audit_log import AuditLog, SalesTarget
 from app.services.auth_service import hash_password
 
 # Ensure tables exist before seeding
@@ -46,27 +51,27 @@ ROLES = [
 USERS = [
     {
         "email": "admin@insightflow.com",
-        "full_name": "Admin User",
+        "full_name": "Olivia Hart",
         "role_name": "admin",
     },
     {
         "email": "manager@insightflow.com",
-        "full_name": "Sarah Mitchell",
+        "full_name": "Marcus Lee",
         "role_name": "manager",
     },
     {
         "email": "staff1@insightflow.com",
-        "full_name": "James Rodriguez",
+        "full_name": "Aisha Rahman",
         "role_name": "staff",
     },
     {
         "email": "staff2@insightflow.com",
-        "full_name": "Emily Zhang",
+        "full_name": "Daniel Kim",
         "role_name": "staff",
     },
     {
         "email": "analyst@insightflow.com",
-        "full_name": "Michael Park",
+        "full_name": "Sofia Chen",
         "role_name": "manager",
     },
 ]
@@ -74,173 +79,85 @@ USERS = [
 DEFAULT_PASSWORD = "password123"
 
 SUPPLIERS = [
-    {
-        "name": "TechSource Global",
-        "contact_person": "Richard Lee",
-        "email": "sales@techsourceglobal.com",
-        "phone": "+1-415-555-0101",
-        "address": "200 Tech Plaza, San Francisco, CA 94105",
-    },
-    {
-        "name": "OfficeMax Supplies Co.",
-        "contact_person": "Jennifer Adams",
-        "email": "orders@officemax-supplies.com",
-        "phone": "+1-212-555-0202",
-        "address": "450 Commerce Ave, New York, NY 10001",
-    },
-    {
-        "name": "Comfort Living Furniture",
-        "contact_person": "Thomas Chen",
-        "email": "wholesale@comfortliving.com",
-        "phone": "+1-312-555-0303",
-        "address": "88 Design District, Chicago, IL 60607",
-    },
-    {
-        "name": "FreshHarvest Foods Inc.",
-        "contact_person": "Maria Gonzalez",
-        "email": "bulk@freshharvestfoods.com",
-        "phone": "+1-305-555-0404",
-        "address": "1200 Agri Park, Miami, FL 33101",
-    },
-    {
-        "name": "StyleCraft Apparel Group",
-        "contact_person": "Daniel Kim",
-        "email": "b2b@stylecraftapparel.com",
-        "phone": "+1-213-555-0505",
-        "address": "750 Fashion Blvd, Los Angeles, CA 90015",
-    },
+    {"name": "Vertex Computing", "contact_person": "Nora Patel", "email": "partnerdesk@vertex.example", "phone": "+1-415-555-0101", "address": "180 Market Street, San Francisco, CA"},
+    {"name": "Northstar Collaboration", "contact_person": "Ethan Brooks", "email": "channel@northstar.example", "phone": "+1-206-555-0102", "address": "420 Lakeview Avenue, Seattle, WA"},
+    {"name": "ErgoWorks Contract", "contact_person": "Maya Wilson", "email": "accounts@ergoworks.example", "phone": "+1-312-555-0103", "address": "75 Fulton Plaza, Chicago, IL"},
+    {"name": "SignalGrid Networks", "contact_person": "Lucas Martin", "email": "distribution@signalgrid.example", "phone": "+1-512-555-0104", "address": "900 Innovation Drive, Austin, TX"},
+    {"name": "CoreOffice Logistics", "contact_person": "Grace Liu", "email": "fulfillment@coreoffice.example", "phone": "+1-201-555-0105", "address": "88 Commerce Way, Newark, NJ"},
 ]
 
 CUSTOMERS = [
-    {
-        "name": "Walmart Retail Corp",
-        "company": "Walmart Inc.",
-        "email": "procurement@walmart-corp.example.com",
-        "phone": "+1-479-555-1001",
-        "region": "North",
-        "customer_type": "retail",
-    },
-    {
-        "name": "Best Buy Wholesale",
-        "company": "Best Buy Co. Inc.",
-        "email": "wholesale@bestbuy.example.com",
-        "phone": "+1-612-555-1002",
-        "region": "South",
-        "customer_type": "wholesale",
-    },
-    {
-        "name": "Amazon Enterprise Solutions",
-        "company": "Amazon.com Inc.",
-        "email": "enterprise@amazon-solutions.example.com",
-        "phone": "+1-206-555-1003",
-        "region": "East",
-        "customer_type": "enterprise",
-    },
-    {
-        "name": "Target Distribution Center",
-        "company": "Target Corporation",
-        "email": "supply@target-dist.example.com",
-        "phone": "+1-651-555-1004",
-        "region": "West",
-        "customer_type": "retail",
-    },
-    {
-        "name": "Costco Wholesale Partners",
-        "company": "Costco Wholesale Corp.",
-        "email": "vendor@costco.example.com",
-        "phone": "+1-425-555-1005",
-        "region": "Central",
-        "customer_type": "wholesale",
-    },
-    {
-        "name": "Home Depot Procurement",
-        "company": "The Home Depot Inc.",
-        "email": "buy@homedepot-proc.example.com",
-        "phone": "+1-770-555-1006",
-        "region": "North",
-        "customer_type": "retail",
-    },
-    {
-        "name": "Staples Business Advantage",
-        "company": "Staples Inc.",
-        "email": "biz@staples-advantage.example.com",
-        "phone": "+1-508-555-1007",
-        "region": "South",
-        "customer_type": "enterprise",
-    },
-    {
-        "name": "Kroger Food Markets",
-        "company": "The Kroger Co.",
-        "email": "supply@kroger-markets.example.com",
-        "phone": "+1-513-555-1008",
-        "region": "East",
-        "customer_type": "retail",
-    },
-    {
-        "name": "Macy's Department Store",
-        "company": "Macy's Inc.",
-        "email": "vendor@macys-dept.example.com",
-        "phone": "+1-513-555-1009",
-        "region": "West",
-        "customer_type": "wholesale",
-    },
-    {
-        "name": "FedEx Logistics Corp",
-        "company": "FedEx Corporation",
-        "email": "procurement@fedex-logistics.example.com",
-        "phone": "+1-901-555-1010",
-        "region": "Central",
-        "customer_type": "enterprise",
-    },
+    {"name": "NorthBridge Retail Group", "company": "NorthBridge Retail Group", "email": "procurement@northbridge.example", "phone": "+1-617-555-1001", "region": "North", "customer_type": "enterprise"},
+    {"name": "Meridian Health Network", "company": "Meridian Health Network", "email": "sourcing@meridianhealth.example", "phone": "+1-612-555-1002", "region": "North", "customer_type": "enterprise"},
+    {"name": "Lakefront Legal Partners", "company": "Lakefront Legal Partners", "email": "operations@lakefrontlegal.example", "phone": "+1-312-555-1003", "region": "North", "customer_type": "wholesale"},
+    {"name": "Boreal Insurance Services", "company": "Boreal Insurance Services", "email": "workplace@borealinsurance.example", "phone": "+1-651-555-1004", "region": "North", "customer_type": "retail"},
+    {"name": "Harborview Hospitality", "company": "Harborview Hospitality Group", "email": "purchasing@harborview.example", "phone": "+1-305-555-1101", "region": "South", "customer_type": "enterprise"},
+    {"name": "Cypress Education Alliance", "company": "Cypress Education Alliance", "email": "technology@cypressedu.example", "phone": "+1-404-555-1102", "region": "South", "customer_type": "enterprise"},
+    {"name": "BluePeak Property Management", "company": "BluePeak Property Management", "email": "facilities@bluepeak.example", "phone": "+1-214-555-1103", "region": "South", "customer_type": "wholesale"},
+    {"name": "Sunline Advisory", "company": "Sunline Advisory LLC", "email": "office@sunlineadvisory.example", "phone": "+1-813-555-1104", "region": "South", "customer_type": "retail"},
+    {"name": "Apex Financial Services", "company": "Apex Financial Services", "email": "vendor@apexfinancial.example", "phone": "+1-212-555-1201", "region": "East", "customer_type": "enterprise"},
+    {"name": "NovaCare Clinics", "company": "NovaCare Clinics", "email": "procurement@novacare.example", "phone": "+1-215-555-1202", "region": "East", "customer_type": "enterprise"},
+    {"name": "Elm & Stone Architects", "company": "Elm & Stone Architects", "email": "studioops@elmandstone.example", "phone": "+1-718-555-1203", "region": "East", "customer_type": "wholesale"},
+    {"name": "Beacon Media Collective", "company": "Beacon Media Collective", "email": "itops@beaconmedia.example", "phone": "+1-646-555-1204", "region": "East", "customer_type": "retail"},
+    {"name": "Atlas Manufacturing", "company": "Atlas Manufacturing Co.", "email": "supplychain@atlasmanufacturing.example", "phone": "+1-503-555-1301", "region": "West", "customer_type": "enterprise"},
+    {"name": "Redwood Mobility", "company": "Redwood Mobility Inc.", "email": "workplace@redwoodmobility.example", "phone": "+1-408-555-1302", "region": "West", "customer_type": "enterprise"},
+    {"name": "Summit Renewable Energy", "company": "Summit Renewable Energy", "email": "purchasing@summitrenewable.example", "phone": "+1-720-555-1303", "region": "West", "customer_type": "wholesale"},
+    {"name": "Pacific Crest Studios", "company": "Pacific Crest Studios", "email": "operations@pacificcrest.example", "phone": "+1-323-555-1304", "region": "West", "customer_type": "retail"},
+    {"name": "Ironwood Distribution", "company": "Ironwood Distribution", "email": "buyers@ironwood.example", "phone": "+1-816-555-1401", "region": "Central", "customer_type": "enterprise"},
+    {"name": "Prairie State Foods", "company": "Prairie State Foods", "email": "corporateit@prairiestate.example", "phone": "+1-515-555-1402", "region": "Central", "customer_type": "enterprise"},
+    {"name": "CedarWorks Engineering", "company": "CedarWorks Engineering", "email": "admin@cedarworks.example", "phone": "+1-314-555-1403", "region": "Central", "customer_type": "wholesale"},
+    {"name": "Union Square Accounting", "company": "Union Square Accounting", "email": "office@unionsquare.example", "phone": "+1-402-555-1404", "region": "Central", "customer_type": "retail"},
 ]
 
 PRODUCTS = [
-    # Electronics — supplier: TechSource Global (index 0)
-    {"name": "Wireless Bluetooth Headphones", "category": "Electronics", "supplier_idx": 0, "unit_price": 79.99, "cost_price": 35.00, "reorder_level": 20},
-    {"name": "USB-C Hub Adapter 7-in-1", "category": "Electronics", "supplier_idx": 0, "unit_price": 45.99, "cost_price": 18.00, "reorder_level": 30},
-    {"name": "27-inch LED Monitor 4K", "category": "Electronics", "supplier_idx": 0, "unit_price": 299.99, "cost_price": 150.00, "reorder_level": 10},
-    # Office Supplies — supplier: OfficeMax (index 1)
-    {"name": "Premium A4 Paper (500 sheets)", "category": "Office Supplies", "supplier_idx": 1, "unit_price": 12.99, "cost_price": 5.00, "reorder_level": 100},
-    {"name": "Ergonomic Mesh Office Chair", "category": "Office Supplies", "supplier_idx": 1, "unit_price": 189.99, "cost_price": 80.00, "reorder_level": 15},
-    {"name": "Desk Organizer Set Bamboo", "category": "Office Supplies", "supplier_idx": 1, "unit_price": 29.99, "cost_price": 12.00, "reorder_level": 40},
-    # Furniture — supplier: Comfort Living (index 2)
-    {"name": "Electric Standing Desk 60-inch", "category": "Furniture", "supplier_idx": 2, "unit_price": 449.99, "cost_price": 200.00, "reorder_level": 8},
-    {"name": "3-Drawer Steel Filing Cabinet", "category": "Furniture", "supplier_idx": 2, "unit_price": 129.99, "cost_price": 55.00, "reorder_level": 12},
-    {"name": "12-Person Conference Table", "category": "Furniture", "supplier_idx": 2, "unit_price": 799.99, "cost_price": 350.00, "reorder_level": 3},
-    # Food & Beverage — supplier: FreshHarvest (index 3)
-    {"name": "Organic Arabica Coffee Beans 1kg", "category": "Food & Beverage", "supplier_idx": 3, "unit_price": 24.99, "cost_price": 10.00, "reorder_level": 50},
-    {"name": "Premium Japanese Green Tea 100-bag", "category": "Food & Beverage", "supplier_idx": 3, "unit_price": 15.99, "cost_price": 6.00, "reorder_level": 60},
-    {"name": "Protein Bar Variety Pack (24 ct)", "category": "Food & Beverage", "supplier_idx": 3, "unit_price": 34.99, "cost_price": 14.00, "reorder_level": 40},
-    # Clothing — supplier: StyleCraft (index 4)
-    {"name": "Business Casual Blazer", "category": "Clothing", "supplier_idx": 4, "unit_price": 89.99, "cost_price": 35.00, "reorder_level": 25},
-    {"name": "100% Cotton Dress Shirt", "category": "Clothing", "supplier_idx": 4, "unit_price": 49.99, "cost_price": 18.00, "reorder_level": 35},
-    {"name": "Performance Polo Shirt Moisture-Wicking", "category": "Clothing", "supplier_idx": 4, "unit_price": 29.99, "cost_price": 11.00, "reorder_level": 50},
+    {"name": "Vertex ProBook 14", "category": "Computing", "supplier_idx": 0, "unit_price": 1249.0, "cost_price": 910.0, "reorder_level": 12, "stock": 42, "demand_weight": 10},
+    {"name": "Vertex Mini Desktop", "category": "Computing", "supplier_idx": 0, "unit_price": 899.0, "cost_price": 650.0, "reorder_level": 10, "stock": 36, "demand_weight": 7},
+    {"name": "27-inch 4K USB-C Monitor", "category": "Displays", "supplier_idx": 0, "unit_price": 489.0, "cost_price": 315.0, "reorder_level": 18, "stock": 64, "demand_weight": 12},
+    {"name": "Dual Monitor Arm", "category": "Workspace", "supplier_idx": 2, "unit_price": 179.0, "cost_price": 92.0, "reorder_level": 24, "stock": 78, "demand_weight": 8},
+    {"name": "USB-C Docking Station", "category": "Accessories", "supplier_idx": 0, "unit_price": 229.0, "cost_price": 138.0, "reorder_level": 25, "stock": 91, "demand_weight": 13},
+    {"name": "Noise-Canceling Business Headset", "category": "Collaboration", "supplier_idx": 1, "unit_price": 249.0, "cost_price": 142.0, "reorder_level": 20, "stock": 58, "demand_weight": 9},
+    {"name": "4K Conference Room Camera", "category": "Collaboration", "supplier_idx": 1, "unit_price": 699.0, "cost_price": 455.0, "reorder_level": 18, "stock": 11, "demand_weight": 6},
+    {"name": "Meeting Room Speakerphone", "category": "Collaboration", "supplier_idx": 1, "unit_price": 429.0, "cost_price": 265.0, "reorder_level": 14, "stock": 33, "demand_weight": 5},
+    {"name": "Wi-Fi 6 Managed Access Point", "category": "Networking", "supplier_idx": 3, "unit_price": 389.0, "cost_price": 248.0, "reorder_level": 15, "stock": 9, "demand_weight": 7},
+    {"name": "24-Port Managed Network Switch", "category": "Networking", "supplier_idx": 3, "unit_price": 749.0, "cost_price": 520.0, "reorder_level": 8, "stock": 21, "demand_weight": 4},
+    {"name": "Ergonomic Task Chair", "category": "Workspace", "supplier_idx": 2, "unit_price": 529.0, "cost_price": 310.0, "reorder_level": 16, "stock": 47, "demand_weight": 8},
+    {"name": "Electric Standing Desk", "category": "Workspace", "supplier_idx": 2, "unit_price": 849.0, "cost_price": 505.0, "reorder_level": 10, "stock": 7, "demand_weight": 5},
+    {"name": "Wireless Keyboard and Mouse Set", "category": "Accessories", "supplier_idx": 4, "unit_price": 119.0, "cost_price": 61.0, "reorder_level": 35, "stock": 126, "demand_weight": 14},
+    {"name": "65W USB-C Power Adapter", "category": "Accessories", "supplier_idx": 4, "unit_price": 69.0, "cost_price": 34.0, "reorder_level": 40, "stock": 148, "demand_weight": 11},
+    {"name": "Laptop Privacy Filter 14-inch", "category": "Accessories", "supplier_idx": 4, "unit_price": 59.0, "cost_price": 27.0, "reorder_level": 30, "stock": 84, "demand_weight": 6},
+    {"name": "Portable Full-HD Projector", "category": "Displays", "supplier_idx": 1, "unit_price": 779.0, "cost_price": 498.0, "reorder_level": 7, "stock": 19, "demand_weight": 3},
+    {"name": "Smart Power Management Strip", "category": "Accessories", "supplier_idx": 4, "unit_price": 89.0, "cost_price": 44.0, "reorder_level": 30, "stock": 97, "demand_weight": 7},
+    {"name": "IT Asset Tag Kit (100)", "category": "IT Operations", "supplier_idx": 4, "unit_price": 149.0, "cost_price": 68.0, "reorder_level": 20, "stock": 55, "demand_weight": 4},
 ]
 
 REGIONS = ["North", "South", "East", "West", "Central"]
-SALESPERSONS = ["Alice Chen", "Bob Smith", "Carol Wang", "David Kim", "Eve Johnson"]
+SALESPERSONS_BY_REGION = {
+    "North": ["Aisha Rahman", "Noah Williams"],
+    "South": ["Daniel Kim", "Maya Thompson"],
+    "East": ["Sofia Chen", "Ethan Brooks"],
+    "West": ["Lucas Martin", "Priya Shah"],
+    "Central": ["Marcus Lee", "Grace Liu"],
+}
 PAYMENT_METHODS = ["credit_card", "bank_transfer", "check", "cash", "net30"]
 CARRIERS = ["FedEx Express", "UPS Ground", "USPS Priority", "DHL Express", "Amazon Logistics"]
-
-SALES_TARGETS = [
-    {"region": "North", "target_amount": 150000.0, "period": "quarterly", "year": 2025, "month": None},
-    {"region": "South", "target_amount": 120000.0, "period": "quarterly", "year": 2025, "month": None},
-    {"region": "East", "target_amount": 180000.0, "period": "quarterly", "year": 2025, "month": None},
-    {"region": "West", "target_amount": 140000.0, "period": "quarterly", "year": 2025, "month": None},
-    {"region": "Central", "target_amount": 160000.0, "period": "quarterly", "year": 2025, "month": None},
-]
+TARGET_COMPLETION = {"North": 91.0, "South": 84.0, "East": 106.0, "West": 97.0, "Central": 88.0}
+MONTHLY_ORDER_COUNTS = [10, 11, 12, 12, 13, 13, 14, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 22]
 
 
 # ---------------------------------------------------------------------------
 # Helper utilities
 # ---------------------------------------------------------------------------
 
-def _random_date_in_last_n_months(n_months: int = 12) -> date:
-    """Return a random date within the last n_months."""
+def _month_window(months_ago: int) -> tuple[date, date]:
+    """Return the usable date window for a month relative to today."""
     today = date.today()
-    start = today - timedelta(days=n_months * 30)
-    delta = (today - start).days
-    return start + timedelta(days=random.randint(0, delta))
+    month_index = today.year * 12 + today.month - 1 - months_ago
+    year, month_zero = divmod(month_index, 12)
+    month = month_zero + 1
+    start = date(year, month, 1)
+    last_day = calendar.monthrange(year, month)[1]
+    end = today if months_ago == 0 else date(year, month, last_day)
+    return start, end
 
 
 def _generate_tracking_number() -> str:
@@ -330,7 +247,7 @@ def seed_products(db: Session, suppliers: List[Supplier]) -> List[Product]:
             supplier_id=suppliers[p["supplier_idx"]].id,
             unit_price=p["unit_price"],
             cost_price=p["cost_price"],
-            current_stock=random.randint(50, 500),
+            current_stock=p["stock"],
             reorder_level=p["reorder_level"],
             status="active",
         )
@@ -346,100 +263,93 @@ def seed_orders(
     customers: List[Customer],
     products: List[Product],
 ) -> List[Order]:
-    """Create 50 orders with 1-4 line items each over the last 12 months."""
-    print("  Creating orders (50 orders with items)...")
+    """Create an 18-month B2B order history with coherent business signals."""
+    print("  Creating 18 months of customer orders...")
     orders = []
     today = date.today()
+    customer_weights = {"enterprise": 5, "wholesale": 3, "retail": 1}
+    product_weights = [p["demand_weight"] for p in PRODUCTS]
 
-    for i in range(50):
-        customer = random.choice(customers)
-        region = random.choice(REGIONS)
-        salesperson = random.choice(SALESPERSONS)
-        order_date = _random_date_in_last_n_months(12)
-
-        # Determine payment status based on order age
-        days_ago = (today - order_date).days
-        if days_ago < 30:
-            payment_status = random.choices(
-                ["paid", "pending", "overdue"],
-                weights=[60, 35, 5],
+    # The list is oldest -> newest so the dashboard shows steady growth rather
+    # than a flat wall of random records.
+    for months_ago, order_count in enumerate(reversed(MONTHLY_ORDER_COUNTS)):
+        start, end = _month_window(months_ago)
+        for _ in range(order_count):
+            region = random.choices(REGIONS, weights=[20, 17, 24, 22, 17], k=1)[0]
+            regional_customers = [c for c in customers if c.region == region]
+            customer = random.choices(
+                regional_customers,
+                weights=[customer_weights[c.customer_type] for c in regional_customers],
                 k=1,
             )[0]
-        elif days_ago < 90:
-            payment_status = random.choices(
-                ["paid", "pending", "overdue"],
-                weights=[80, 15, 5],
-                k=1,
-            )[0]
-        else:
-            payment_status = random.choices(
-                ["paid", "pending", "overdue"],
-                weights=[92, 5, 3],
-                k=1,
-            )[0]
+            order_date = start + timedelta(days=random.randint(0, (end - start).days))
+            days_ago = (today - order_date).days
 
-        # Determine shipment status based on payment and age
-        if payment_status == "paid" and days_ago > 7:
-            shipment_status = random.choices(
-                ["delivered", "shipped", "pending"],
-                weights=[80, 15, 5],
-                k=1,
-            )[0]
-        elif payment_status == "paid":
-            shipment_status = random.choices(
-                ["shipped", "pending", "preparing"],
-                weights=[50, 40, 10],
-                k=1,
-            )[0]
-        else:
-            shipment_status = random.choices(
-                ["pending", "preparing"],
-                weights=[70, 30],
-                k=1,
-            )[0]
+            if days_ago < 30:
+                payment_status = random.choices(["paid", "pending"], weights=[68, 32], k=1)[0]
+            elif days_ago < 60:
+                payment_status = random.choices(["paid", "overdue"], weights=[90, 10], k=1)[0]
+            elif days_ago < 150:
+                payment_status = random.choices(["paid", "overdue"], weights=[96, 4], k=1)[0]
+            else:
+                # Very old open invoices undermine the credibility of an
+                # actively managed portfolio; historical balances are closed.
+                payment_status = random.choices(["paid", "overdue"], weights=[100, 0], k=1)[0]
 
-        order = Order(
-            customer_id=customer.id,
-            order_date=order_date,
-            payment_status=payment_status,
-            shipment_status=shipment_status,
-            region=region,
-            salesperson=salesperson,
-            total_amount=0.0,
-        )
-        db.add(order)
-        db.flush()  # get order.id
+            if days_ago > 12:
+                shipment_status = random.choices(["delivered", "shipped"], weights=[96, 4], k=1)[0]
+            elif days_ago > 4:
+                shipment_status = random.choices(["delivered", "shipped", "preparing"], weights=[45, 45, 10], k=1)[0]
+            else:
+                shipment_status = random.choices(["shipped", "preparing", "pending"], weights=[35, 45, 20], k=1)[0]
 
-        # Generate 1-4 line items
-        num_items = random.randint(1, 4)
-        selected_products = random.sample(products, min(num_items, len(products)))
-        total_amount = 0.0
-
-        for product in selected_products:
-            quantity = random.randint(1, 20)
-            # Occasionally adjust price slightly (bulk discount or market variation)
-            price_variation = random.uniform(0.90, 1.05)
-            unit_price = round(product.unit_price * price_variation, 2)
-            item_total = round(unit_price * quantity, 2)
-            total_amount += item_total
-
-            item = OrderItem(
-                order_id=order.id,
-                product_id=product.id,
-                quantity=quantity,
-                unit_price=unit_price,
-                total=item_total,
+            order = Order(
+                customer_id=customer.id,
+                order_date=order_date,
+                payment_status=payment_status,
+                shipment_status=shipment_status,
+                region=region,
+                salesperson=random.choice(SALESPERSONS_BY_REGION[region]),
+                total_amount=0.0,
+                created_at=datetime.combine(order_date, datetime.min.time()) + timedelta(hours=random.randint(8, 17)),
             )
-            db.add(item)
+            db.add(order)
+            db.flush()
 
-        order.total_amount = round(total_amount, 2)
+            item_count = random.randint(2, 5)
+            selected_products = []
+            while len(selected_products) < item_count:
+                candidate = random.choices(products, weights=product_weights, k=1)[0]
+                if candidate not in selected_products:
+                    selected_products.append(candidate)
 
-        # Update customer total spending and last purchase date
-        customer.total_spending = (customer.total_spending or 0.0) + order.total_amount
-        if customer.last_purchase_date is None or order_date > customer.last_purchase_date.date():
-            customer.last_purchase_date = datetime.combine(order_date, datetime.min.time())
+            total_amount = 0.0
+            quantity_ranges = {
+                "enterprise": (8, 28),
+                "wholesale": (5, 18),
+                "retail": (2, 8),
+            }
+            qty_low, qty_high = quantity_ranges[customer.customer_type]
+            discount = {"enterprise": 0.91, "wholesale": 0.95, "retail": 1.0}[customer.customer_type]
 
-        orders.append(order)
+            for product in selected_products:
+                quantity = random.randint(qty_low, qty_high)
+                unit_price = round(product.unit_price * discount * random.uniform(0.985, 1.015), 2)
+                item_total = round(unit_price * quantity, 2)
+                total_amount += item_total
+                db.add(OrderItem(
+                    order_id=order.id,
+                    product_id=product.id,
+                    quantity=quantity,
+                    unit_price=unit_price,
+                    total=item_total,
+                ))
+
+            order.total_amount = round(total_amount, 2)
+            customer.total_spending = round((customer.total_spending or 0.0) + order.total_amount, 2)
+            if customer.last_purchase_date is None or order_date > customer.last_purchase_date.date():
+                customer.last_purchase_date = datetime.combine(order_date, datetime.min.time())
+            orders.append(order)
 
     db.flush()
     print(f"    -> {len(orders)} orders created with line items")
@@ -462,14 +372,25 @@ def seed_inventory(db: Session, products: List[Product]) -> None:
     print(f"    -> {count} inventory records created")
 
 
-def seed_sales_targets(db: Session) -> None:
-    """Create regional sales targets."""
+def seed_sales_targets(db: Session, orders: List[Order]) -> None:
+    """Create current-year targets that encode a realistic regional story."""
     print("  Creating sales targets...")
-    for t in SALES_TARGETS:
-        target = SalesTarget(**t)
-        db.add(target)
+    revenue_by_region = defaultdict(float)
+    current_year = date.today().year
+    for order in orders:
+        if order.order_date.year == current_year:
+            revenue_by_region[order.region] += order.total_amount
+    for region in REGIONS:
+        completion = TARGET_COMPLETION[region]
+        target_amount = round(revenue_by_region[region] / (completion / 100), 2)
+        db.add(SalesTarget(
+            region=region,
+            target_amount=target_amount,
+            period="annual",
+            year=current_year,
+        ))
     db.flush()
-    print(f"    -> {len(SALES_TARGETS)} sales targets created")
+    print(f"    -> {len(REGIONS)} current-year sales targets created")
 
 
 def seed_payments(db: Session, orders: List[Order]) -> None:
@@ -482,7 +403,7 @@ def seed_payments(db: Session, orders: List[Order]) -> None:
         due_date = order.order_date + timedelta(days=30)
 
         if order.payment_status == "paid":
-            status = "completed"
+            status = "paid"
             paid_date = order.order_date + timedelta(days=random.randint(1, 25))
         elif order.payment_status == "overdue":
             status = "overdue"
@@ -546,15 +467,51 @@ def seed_shipments(db: Session, orders: List[Order]) -> None:
     print(f"    -> {count} shipment records created")
 
 
+def seed_audit_logs(db: Session, users: List[User], orders: List[Order]) -> None:
+    """Create a concise, credible operations trail for the audit workspace."""
+    print("  Creating audit trail...")
+    actions = [
+        ("order.reviewed", "order"),
+        ("payment.follow_up", "payment"),
+        ("inventory.reorder_flagged", "product"),
+        ("customer.profile_updated", "customer"),
+        ("report.exported", "analytics"),
+    ]
+    for index in range(36):
+        action, entity_type = actions[index % len(actions)]
+        order = orders[-(index + 1)]
+        db.add(AuditLog(
+            user_id=users[index % len(users)].id,
+            action=action,
+            entity_type=entity_type,
+            entity_id=order.id if entity_type in ("order", "payment") else None,
+            details=json.dumps({
+                "source": "operations_console",
+                "region": order.region,
+                "reference": f"ORD-{order.id:05d}",
+            }),
+            ip_address=f"10.24.8.{20 + (index % 12)}",
+            timestamp=datetime.now() - timedelta(hours=index * 7 + 2),
+        ))
+    db.flush()
+    print("    -> 36 audit events created")
+
+
 # ---------------------------------------------------------------------------
 # Main entry point
 # ---------------------------------------------------------------------------
 
-def run_seed() -> None:
+def run_seed(reset: bool = False) -> None:
     """Main seed function — checks for existing data then creates all records."""
     print("=" * 60)
     print("InsightFlow — Seed Data Generator")
     print("=" * 60)
+
+    random.seed(20260722)
+    if reset:
+        print("Reset requested: rebuilding local InsightFlow tables...")
+        Base.metadata.drop_all(bind=engine)
+        Base.metadata.create_all(bind=engine)
 
     db: Session = SessionLocal()
 
@@ -581,9 +538,10 @@ def run_seed() -> None:
         products = seed_products(db, suppliers)
         orders = seed_orders(db, customers, products)
         seed_inventory(db, products)
-        seed_sales_targets(db)
+        seed_sales_targets(db, orders)
         seed_payments(db, orders)
         seed_shipments(db, orders)
+        seed_audit_logs(db, users, orders)
 
         # ------------------------------------------------------------------
         # Final commit
@@ -604,6 +562,7 @@ def run_seed() -> None:
         print(f"  Sales Targets:{db.query(SalesTarget).count()}")
         print(f"  Payments:     {db.query(Payment).count()}")
         print(f"  Shipments:    {db.query(Shipment).count()}")
+        print(f"  Audit Events: {db.query(AuditLog).count()}")
         print()
         print("Login credentials (all passwords: password123):")
         print("  admin@insightflow.com    — Admin")
@@ -622,4 +581,10 @@ def run_seed() -> None:
 
 
 if __name__ == "__main__":
-    run_seed()
+    parser = argparse.ArgumentParser(description="Seed the InsightFlow database")
+    parser.add_argument(
+        "--reset",
+        action="store_true",
+        help="drop and recreate local tables before seeding",
+    )
+    run_seed(reset=parser.parse_args().reset)

@@ -239,7 +239,7 @@ def get_payment_delay(db: Session) -> List[PaymentDelay]:
         .join(Order, Payment.order_id == Order.id)
         .join(Customer, Order.customer_id == Customer.id)
         .filter(
-            Payment.status != "paid",
+            Payment.status == "overdue",
             Payment.due_date.isnot(None),
             Payment.due_date < date.today(),
         )

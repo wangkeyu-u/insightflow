@@ -30,11 +30,12 @@ def get_summary(db: Session) -> DashboardSummary:
     total_customers = db.query(func.count(Customer.id)).scalar() or 0
     total_products = db.query(func.count(Product.id)).scalar() or 0
 
-    # Overdue payments: status != paid and due_date is in the past
+    # Only explicitly overdue receivables belong in AR-at-risk. Pending and
+    # legacy terminal statuses must not be treated as delinquent.
     overdue_amount = (
         db.query(func.coalesce(func.sum(Payment.amount), 0.0))
         .filter(
-            Payment.status != "paid",
+            Payment.status == "overdue",
             Payment.due_date < date.today(),
         )
         .scalar()
@@ -220,7 +221,7 @@ def get_alerts(db: Session) -> List[DashboardAlert]:
         .join(Order, Payment.order_id == Order.id)
         .join(Customer, Order.customer_id == Customer.id)
         .filter(
-            Payment.status != "paid",
+            Payment.status == "overdue",
             Payment.due_date < date.today(),
         )
         .limit(10)
