@@ -1,11 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Search, Loader2, Eye, Pencil, Trash2, X, CheckSquare, Square, Download } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { Plus, Search, Loader2, Eye, Pencil, Trash2, X, CheckSquare, Square, Download, SlidersHorizontal, RotateCcw, ArrowDownWideNarrow, FileDown } from "lucide-react";
 import { ordersApi, batchApi, exportApi } from "@/api/endpoints";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/app/PageHeader";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -30,11 +32,12 @@ interface FormItem {
 }
 
 export default function Orders() {
+  const [searchParams] = useSearchParams();
   const [orders, setOrders] = useState<OrderListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [payFilter, setPayFilter] = useState("");
+  const [payFilter, setPayFilter] = useState(searchParams.get("payment") || "");
   const [shipFilter, setShipFilter] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -77,6 +80,19 @@ export default function Orders() {
     } catch (e) { console.error("PDF download failed:", e); }
   };
 
+  const handleExportOrders = async () => {
+    try {
+      const res = await exportApi.salesCSV();
+      const blob = new Blob([res.data as unknown as BlobPart], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `orders-${new Date().toISOString().slice(0, 10)}.csv`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (e) { console.error("Order export failed:", e); }
+  };
+
   // Create/Edit form state
   const [formCustomerId, setFormCustomerId] = useState("");
   const [formRegion, setFormRegion] = useState("");
@@ -110,6 +126,7 @@ export default function Orders() {
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
+  const activeFilterCount = [search, payFilter, shipFilter, dateFrom, dateTo].filter(Boolean).length;
 
   const openCreate = () => {
     setEditingOrder(null);
@@ -194,25 +211,45 @@ export default function Orders() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold tracking-tight">Orders</h2>
-        <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />New Order</Button>
-      </div>
+      <PageHeader
+        eyebrow="Revenue operations"
+        title="Orders"
+        description="Review commercial activity, payment exposure, and fulfillment progress across every account."
+        actions={
+          <>
+            <Button variant="outline" onClick={handleExportOrders}><FileDown className="mr-2 h-4 w-4" />Export CSV</Button>
+            <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />New order</Button>
+          </>
+        }
+      />
 
       {/* Filters */}
-      <Card>
-        <CardContent className="flex flex-wrap items-end gap-3 p-4">
-          <div className="min-w-[180px] flex-1">
-            <Label className="text-xs">Search</Label>
+      <Card className="overflow-visible">
+        <CardContent className="p-4">
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600"><SlidersHorizontal className="h-4 w-4" /></div>
+              <div>
+                <p className="text-sm font-semibold text-slate-800">Filter orders</p>
+                <p className="text-xs text-muted-foreground">{activeFilterCount ? `${activeFilterCount} active filters` : "Showing the full order book"}</p>
+              </div>
+            </div>
+            <Button variant="ghost" size="sm" onClick={clearFilters} disabled={activeFilterCount === 0}>
+              <RotateCcw className="mr-1.5 h-3.5 w-3.5" />Reset
+            </Button>
+          </div>
+          <div className="grid grid-cols-[minmax(240px,1.5fr)_repeat(5,minmax(130px,1fr))] items-end gap-3">
+          <div>
+            <Label className="filter-label">Search</Label>
             <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input className="pl-8" placeholder="Customer, product, ID..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} />
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input className="pl-9" placeholder="Customer, product, or order ID" value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} />
             </div>
           </div>
           <div>
-            <Label className="text-xs">Payment</Label>
-            <select className="h-9 rounded-md border bg-background px-3 text-sm" value={payFilter} onChange={(e) => { setPayFilter(e.target.value); setPage(0); }}>
-              <option value="">All</option>
+            <Label className="filter-label">Payment</Label>
+            <select className="control-select" value={payFilter} onChange={(e) => { setPayFilter(e.target.value); setPage(0); }}>
+              <option value="">All payments</option>
               <option value="pending">Pending</option>
               <option value="paid">Paid</option>
               <option value="overdue">Overdue</option>
@@ -220,9 +257,9 @@ export default function Orders() {
             </select>
           </div>
           <div>
-            <Label className="text-xs">Shipment</Label>
-            <select className="h-9 rounded-md border bg-background px-3 text-sm" value={shipFilter} onChange={(e) => { setShipFilter(e.target.value); setPage(0); }}>
-              <option value="">All</option>
+            <Label className="filter-label">Shipment</Label>
+            <select className="control-select" value={shipFilter} onChange={(e) => { setShipFilter(e.target.value); setPage(0); }}>
+              <option value="">All shipments</option>
               <option value="pending">Pending</option>
               <option value="processing">Processing</option>
               <option value="shipped">Shipped</option>
@@ -230,32 +267,41 @@ export default function Orders() {
             </select>
           </div>
           <div>
-            <Label className="text-xs">From</Label>
+            <Label className="filter-label">From</Label>
             <Input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(0); }} />
           </div>
           <div>
-            <Label className="text-xs">To</Label>
+            <Label className="filter-label">To</Label>
             <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(0); }} />
           </div>
           <div>
-            <Label className="text-xs">Sort</Label>
-            <select className="h-9 rounded-md border bg-background px-3 text-sm" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+            <Label className="filter-label">Sort</Label>
+            <div className="flex gap-2">
+            <select className="control-select min-w-0 flex-1" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
               <option value="date">Date</option>
               <option value="amount">Amount</option>
               <option value="status">Status</option>
             </select>
+            <Button
+              title={sortOrder === "desc" ? "Newest first" : "Oldest first"}
+              aria-label={sortOrder === "desc" ? "Sort oldest first" : "Sort newest first"}
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 shrink-0"
+              onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+            >
+              <ArrowDownWideNarrow className={`h-4 w-4 transition-transform ${sortOrder === "asc" ? "rotate-180" : ""}`} />
+            </Button>
+            </div>
           </div>
-          <Button variant="outline" size="sm" onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}>
-            {sortOrder === "desc" ? "↓" : "↑"}
-          </Button>
-          <Button variant="ghost" size="sm" onClick={clearFilters}>Clear</Button>
+          </div>
         </CardContent>
       </Card>
 
       {/* Batch action bar */}
       {selected.size > 0 && (
-        <div className="flex items-center gap-3 rounded-lg border bg-blue-50 p-3">
-          <span className="text-sm font-medium">{selected.size} selected</span>
+        <div className="flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 shadow-sm">
+          <span className="mr-auto text-sm font-semibold text-blue-950">{selected.size} orders selected</span>
           <Button variant="destructive" size="sm" disabled={batchDeleting} onClick={handleBatchDelete}>
             {batchDeleting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1 h-4 w-4" />}
             Delete Selected
@@ -265,7 +311,14 @@ export default function Orders() {
       )}
 
       {/* Table */}
-      <Card>
+      <Card className="overflow-hidden">
+        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">Order register</p>
+            <p className="text-xs text-muted-foreground">{total} records · {limit} per page</p>
+          </div>
+          {payFilter && <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700">Payment: {payFilter}</Badge>}
+        </div>
         <CardContent className="p-0">
           {loading ? (
             <div className="flex h-32 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
@@ -284,7 +337,7 @@ export default function Orders() {
                   <TableHead>ID</TableHead><TableHead>Customer</TableHead><TableHead>Date</TableHead>
                   <TableHead>Region</TableHead><TableHead>Salesperson</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
-                  <TableHead>Payment</TableHead><TableHead>Shipment</TableHead><TableHead>Actions</TableHead>
+                    <TableHead>Payment</TableHead><TableHead>Shipment</TableHead><TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -307,13 +360,13 @@ export default function Orders() {
                     <TableCell>{o.region || "—"}</TableCell>
                     <TableCell>{o.salesperson || "—"}</TableCell>
                     <TableCell className="text-right">{fmt(o.total_amount)}</TableCell>
-                    <TableCell><Badge variant={payBadge(o.payment_status) as "default" | "secondary" | "destructive"}>{o.payment_status}</Badge></TableCell>
-                    <TableCell><Badge variant={shipBadge(o.shipment_status) as "default" | "secondary" | "outline"}>{o.shipment_status}</Badge></TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={async () => { const r = await ordersApi.get(o.id); setViewOrder(r.data); }}><Eye className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(o.id)}><Pencil className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => setDeleteId(o.id)}><Trash2 className="h-4 w-4" /></Button>
+                    <TableCell><Badge variant={payBadge(o.payment_status) as "default" | "secondary" | "destructive"} className="capitalize">{o.payment_status}</Badge></TableCell>
+                    <TableCell><Badge variant={shipBadge(o.shipment_status) as "default" | "secondary" | "outline"} className="capitalize">{o.shipment_status}</Badge></TableCell>
+                    <TableCell className="text-right">
+                      <div className="inline-flex items-center rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm">
+                        <Button title="View order" variant="ghost" size="icon" className="icon-action h-7 w-7" onClick={async () => { const r = await ordersApi.get(o.id); setViewOrder(r.data); }}><Eye className="h-3.5 w-3.5" /></Button>
+                        <Button title="Edit order" variant="ghost" size="icon" className="icon-action h-7 w-7" onClick={() => openEdit(o.id)}><Pencil className="h-3.5 w-3.5" /></Button>
+                        <Button title="Delete order" variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:bg-red-50 hover:text-red-600" onClick={() => setDeleteId(o.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -325,11 +378,11 @@ export default function Orders() {
       </Card>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{total} total orders</p>
-        <div className="flex gap-2">
+      <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+        <p className="text-sm text-muted-foreground">Showing <span className="font-semibold text-foreground">{page * limit + (orders.length ? 1 : 0)}–{Math.min((page + 1) * limit, total)}</span> of {total}</p>
+        <div className="flex items-center gap-3">
           <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(page - 1)}>Previous</Button>
-          <span className="flex items-center text-sm">Page {page + 1} of {totalPages}</span>
+          <span className="flex items-center text-xs font-semibold uppercase tracking-wide text-muted-foreground">Page {page + 1} / {totalPages}</span>
           <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>Next</Button>
         </div>
       </div>

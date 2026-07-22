@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/app/PageHeader";
 import {
   Table,
   TableBody,
@@ -200,22 +201,25 @@ export default function Inventory() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-bold tracking-tight">Inventory</h2>
+      <PageHeader
+        eyebrow="Supply operations"
+        title="Inventory"
+        description="Monitor warehouse availability, reorder exposure, and the products that need immediate action."
+        actions={
+          <>
           {lowStock.length > 0 && (
             <Badge variant="destructive" className="flex items-center gap-1">
               <AlertTriangle className="h-3 w-3" />
               {lowStock.length} Low Stock
             </Badge>
           )}
-        </div>
-        <Button variant="outline" size="sm" onClick={exportCSV}>
+        <Button variant="outline" onClick={exportCSV}>
           <Download className="mr-2 h-4 w-4" />
           Export CSV
         </Button>
-      </div>
+          </>
+        }
+      />
 
       {/* Tabs */}
       <div className="flex gap-1 rounded-lg bg-muted p-1 w-fit">
@@ -248,7 +252,7 @@ export default function Inventory() {
           <Card>
             <CardContent className="flex flex-wrap items-end gap-3 p-4">
               <div className="min-w-[200px] flex-1">
-                <Label className="text-xs">Search</Label>
+                <Label className="filter-label">Search</Label>
                 <div className="relative">
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -260,11 +264,11 @@ export default function Inventory() {
                 </div>
               </div>
               <div>
-                <Label className="text-xs">
+                <Label className="filter-label">
                   <Warehouse className="mr-1 inline h-3 w-3" />Warehouse
                 </Label>
                 <select
-                  className="h-9 rounded-md border bg-background px-3 text-sm"
+                  className="control-select min-w-[160px]"
                   value={warehouseFilter}
                   onChange={(e) => { setWarehouseFilter(e.target.value); setPage(0); }}
                 >
@@ -276,9 +280,9 @@ export default function Inventory() {
               </div>
               {categories.length > 0 && (
                 <div>
-                  <Label className="text-xs">Category</Label>
+                  <Label className="filter-label">Category</Label>
                   <select
-                    className="h-9 rounded-md border bg-background px-3 text-sm"
+                    className="control-select min-w-[160px]"
                     value={categoryFilter}
                     onChange={(e) => { setCategoryFilter(e.target.value); setPage(0); }}
                   >
@@ -403,7 +407,7 @@ export default function Inventory() {
           <Card>
             <CardContent className="flex flex-wrap items-end gap-3 p-4">
               <div className="min-w-[250px] flex-1">
-                <Label className="text-xs">Search</Label>
+                <Label className="filter-label">Search</Label>
                 <div className="relative">
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input

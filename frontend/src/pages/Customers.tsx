@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/app/PageHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import type { Customer, OrderListItem } from "@/types";
@@ -99,30 +100,32 @@ export default function Customers() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold tracking-tight">Customers</h2>
-        <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />Add Customer</Button>
-      </div>
+      <PageHeader
+        eyebrow="Account management"
+        title="Customers"
+        description="Manage account profiles, regional ownership, and lifetime commercial value."
+        actions={<Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />Add customer</Button>}
+      />
 
       <Card>
         <CardContent className="flex flex-wrap items-end gap-3 p-4">
           <div className="min-w-[200px] flex-1">
-            <Label className="text-xs">Search</Label>
+            <Label className="filter-label">Search</Label>
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input className="pl-8" placeholder="Name, email, company..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} />
             </div>
           </div>
           <div>
-            <Label className="text-xs">Region</Label>
-            <select className="h-9 rounded-md border bg-background px-3 text-sm" value={regionFilter} onChange={(e) => { setRegionFilter(e.target.value); setPage(0); }}>
+            <Label className="filter-label">Region</Label>
+            <select className="control-select min-w-[150px]" value={regionFilter} onChange={(e) => { setRegionFilter(e.target.value); setPage(0); }}>
               <option value="">All</option>
               {["North", "South", "East", "West", "Central"].map((r) => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>
           <div>
-            <Label className="text-xs">Type</Label>
-            <select className="h-9 rounded-md border bg-background px-3 text-sm" value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(0); }}>
+            <Label className="filter-label">Type</Label>
+            <select className="control-select min-w-[160px]" value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(0); }}>
               <option value="">All</option>
               <option value="retail">Retail</option><option value="wholesale">Wholesale</option><option value="enterprise">Enterprise</option>
             </select>
@@ -158,7 +161,7 @@ export default function Customers() {
                     </button>
                   </TableHead>
                   <TableHead>Name</TableHead><TableHead>Company</TableHead><TableHead>Email</TableHead><TableHead>Phone</TableHead>
-                  <TableHead>Region</TableHead><TableHead>Type</TableHead><TableHead className="text-right">Spending</TableHead><TableHead>Actions</TableHead>
+                  <TableHead>Region</TableHead><TableHead>Type</TableHead><TableHead className="text-right">Spending</TableHead><TableHead className="sticky right-0 bg-slate-50 text-right shadow-[-8px_0_12px_-12px_rgb(15_23_42/0.3)]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -182,11 +185,11 @@ export default function Customers() {
                     <TableCell>{c.region || "—"}</TableCell>
                     <TableCell><Badge variant="outline">{c.customer_type || "—"}</Badge></TableCell>
                     <TableCell className="text-right">{fmt(c.total_spending)}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openView(c)}><Eye className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => setDeleteId(c.id)}><Trash2 className="h-4 w-4" /></Button>
+                    <TableCell className="sticky right-0 bg-white text-right shadow-[-8px_0_12px_-12px_rgb(15_23_42/0.3)]">
+                      <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm">
+                        <Button title="View customer" variant="ghost" size="icon" className="icon-action h-7 w-7" onClick={() => openView(c)}><Eye className="h-3.5 w-3.5" /></Button>
+                        <Button title="Edit customer" variant="ghost" size="icon" className="icon-action h-7 w-7" onClick={() => openEdit(c)}><Pencil className="h-3.5 w-3.5" /></Button>
+                        <Button title="Delete customer" variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:bg-red-50 hover:text-red-600" onClick={() => setDeleteId(c.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>

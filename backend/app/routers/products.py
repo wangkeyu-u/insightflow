@@ -111,6 +111,7 @@ def list_inventory(
             "product_category": inv.product.category if inv.product else None,
             "warehouse": inv.warehouse,
             "quantity": inv.quantity,
+            "reorder_level": inv.product.reorder_level if inv.product else 0,
             "last_updated": inv.last_updated,
         })
     return result
