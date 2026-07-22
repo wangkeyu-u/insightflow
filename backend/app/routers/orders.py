@@ -4,7 +4,7 @@ from datetime import date
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import or_
+from sqlalchemy import String, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.dependencies import get_db, require_role
@@ -108,8 +108,8 @@ def list_orders(
         search_term = f"%{search}%"
         query = query.filter(
             or_(
-                Customer.name.ilike(search_term),
-                Order.id.cast(str).ilike(search_term),
+                Order.customer.has(Customer.name.ilike(search_term)),
+                Order.id.cast(String).ilike(search_term),
                 Order.salesperson.ilike(search_term),
                 Order.region.ilike(search_term),
                 Order.items.any(

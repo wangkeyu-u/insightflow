@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import ReactECharts from "echarts-for-react";
 import {
   DollarSign,
   ShoppingCart,
@@ -11,6 +10,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { dashboardApi } from "@/api/endpoints";
+import EChart from "@/components/charts/EChart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -156,22 +156,22 @@ export default function Dashboard() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base">Revenue Trend</CardTitle></CardHeader>
-          <CardContent><ReactECharts option={trendOpt} style={{ height: 300 }} onEvents={{ click: () => navigate("/orders") }} /></CardContent>
+          <CardContent><EChart option={trendOpt} style={{ height: 300 }} onEvents={{ click: () => navigate("/orders") }} /></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base">Payment Status</CardTitle></CardHeader>
-          <CardContent><ReactECharts option={pieOpt} style={{ height: 300 }} onEvents={{ click: (p: Record<string, string>) => navigate(`/orders?payment=${encodeURIComponent(p.name || "")}`) }} /></CardContent>
+          <CardContent><EChart option={pieOpt} style={{ height: 300 }} onEvents={{ click: (p: Record<string, string>) => navigate(`/orders?payment=${encodeURIComponent(p.name || "")}`) }} /></CardContent>
         </Card>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base">Top Products by Revenue</CardTitle></CardHeader>
-          <CardContent><ReactECharts option={prodOpt} style={{ height: 300 }} onEvents={{ click: () => navigate("/products") }} /></CardContent>
+          <CardContent><EChart option={prodOpt} style={{ height: 300 }} onEvents={{ click: () => navigate("/products") }} /></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base">Regional Performance</CardTitle></CardHeader>
-          <CardContent><ReactECharts option={regOpt} style={{ height: 300 }} onEvents={{ click: (p: Record<string, string>) => navigate(`/customers?region=${encodeURIComponent(p.name || "")}`) }} /></CardContent>
+          <CardContent><EChart option={regOpt} style={{ height: 300 }} onEvents={{ click: (p: Record<string, string>) => navigate(`/customers?region=${encodeURIComponent(p.name || "")}`) }} /></CardContent>
         </Card>
       </div>
 

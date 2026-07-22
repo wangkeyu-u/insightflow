@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   Search,
   Loader2,
-  Filter,
   Calendar,
   Clock,
   User,
