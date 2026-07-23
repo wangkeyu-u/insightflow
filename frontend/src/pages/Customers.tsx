@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/app/PageHeader";
+import { useAuthStore } from "@/stores/authStore";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import type { Customer, OrderListItem } from "@/types";
@@ -17,6 +18,8 @@ interface FormData { name: string; company: string; email: string; phone: string
 const emptyForm: FormData = { name: "", company: "", email: "", phone: "", region: "", customer_type: "retail" };
 
 export default function Customers() {
+  const user = useAuthStore((state) => state.user);
+  const canManage = user?.role.name === "admin" || user?.role.name === "manager";
   const [items, setItems] = useState<Customer[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -92,7 +95,7 @@ export default function Customers() {
     setViewCustomer(c);
     try {
       const res = await customersApi.getOrders(c.id);
-      setViewOrders(res.data.items || []);
+      setViewOrders(Array.isArray(res.data) ? res.data : []);
     } catch { setViewOrders([]); }
   };
 
@@ -104,7 +107,7 @@ export default function Customers() {
         eyebrow="Account management"
         title="Customers"
         description="Manage account profiles, regional ownership, and lifetime commercial value."
-        actions={<Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />Add customer</Button>}
+        actions={canManage && <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />Add customer</Button>}
       />
 
       <Card>
@@ -135,7 +138,7 @@ export default function Customers() {
       </Card>
 
       {/* Batch action bar */}
-      {selected.size > 0 && (
+      {canManage && selected.size > 0 && (
         <div className="flex items-center gap-3 rounded-lg border bg-blue-50 p-3">
           <span className="text-sm font-medium">{selected.size} selected</span>
           <Button variant="destructive" size="sm" disabled={batchDeleting} onClick={handleBatchDelete}>
@@ -152,14 +155,14 @@ export default function Customers() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[40px]">
+                  {canManage && <TableHead className="w-[40px]">
                     <button onClick={() => {
                       if (selected.size === items.length) setSelected(new Set());
                       else setSelected(new Set(items.map(c => c.id)));
                     }}>
                       {selected.size === items.length && items.length > 0 ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
                     </button>
-                  </TableHead>
+                  </TableHead>}
                   <TableHead>Name</TableHead><TableHead>Company</TableHead><TableHead>Email</TableHead><TableHead>Phone</TableHead>
                   <TableHead>Region</TableHead><TableHead>Type</TableHead><TableHead className="text-right">Spending</TableHead><TableHead className="sticky right-0 bg-slate-50 text-right shadow-[-8px_0_12px_-12px_rgb(15_23_42/0.3)]">Actions</TableHead>
                 </TableRow>
@@ -169,7 +172,7 @@ export default function Customers() {
                   <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">No customers found</TableCell></TableRow>
                 ) : items.map((c) => (
                   <TableRow key={c.id}>
-                    <TableCell>
+                    {canManage && <TableCell>
                       <button onClick={() => {
                         const next = new Set(selected);
                         next.has(c.id) ? next.delete(c.id) : next.add(c.id);
@@ -177,7 +180,7 @@ export default function Customers() {
                       }}>
                         {selected.has(c.id) ? <CheckSquare className="h-4 w-4 text-blue-600" /> : <Square className="h-4 w-4 text-muted-foreground" />}
                       </button>
-                    </TableCell>
+                    </TableCell>}
                     <TableCell className="font-medium">{c.name}</TableCell>
                     <TableCell>{c.company || "—"}</TableCell>
                     <TableCell>{c.email || "—"}</TableCell>
@@ -188,8 +191,8 @@ export default function Customers() {
                     <TableCell className="sticky right-0 bg-white text-right shadow-[-8px_0_12px_-12px_rgb(15_23_42/0.3)]">
                       <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm">
                         <Button title="View customer" variant="ghost" size="icon" className="icon-action h-7 w-7" onClick={() => openView(c)}><Eye className="h-3.5 w-3.5" /></Button>
-                        <Button title="Edit customer" variant="ghost" size="icon" className="icon-action h-7 w-7" onClick={() => openEdit(c)}><Pencil className="h-3.5 w-3.5" /></Button>
-                        <Button title="Delete customer" variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:bg-red-50 hover:text-red-600" onClick={() => setDeleteId(c.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                        {canManage && <Button title="Edit customer" variant="ghost" size="icon" className="icon-action h-7 w-7" onClick={() => openEdit(c)}><Pencil className="h-3.5 w-3.5" /></Button>}
+                        {canManage && <Button title="Delete customer" variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:bg-red-50 hover:text-red-600" onClick={() => setDeleteId(c.id)}><Trash2 className="h-3.5 w-3.5" /></Button>}
                       </div>
                     </TableCell>
                   </TableRow>

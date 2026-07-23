@@ -39,7 +39,6 @@ export const auth = {
     email: string;
     password: string;
     full_name: string;
-    role?: string;
   }) =>
     client.post<{ access_token: string; token_type: string }>(
       "/auth/register",
@@ -58,7 +57,7 @@ export const usersApi = {
     email: string;
     password: string;
     full_name?: string;
-    role?: string;
+    role_id?: number;
   }) => client.post<User>("/users", data),
 
   update: (id: number, data: Partial<{ email: string; full_name: string; role_id: number; is_active: boolean }>) =>
@@ -152,7 +151,7 @@ export const customersApi = {
   delete: (id: number) => client.delete(`/customers/${id}`),
 
   getOrders: (id: number) =>
-    client.get<PaginatedResponse<OrderListItem>>(`/customers/${id}/orders`),
+    client.get<OrderListItem[]>(`/customers/${id}/orders`),
 };
 
 // ====== Products ======
@@ -179,7 +178,7 @@ export const productsApi = {
 // ====== Inventory ======
 export const inventoryApi = {
   list: (params?: { skip?: number; limit?: number }) =>
-    client.get<PaginatedResponse<Inventory>>("/products/inventory", {
+    client.get<Inventory[]>("/products/inventory", {
       params,
     }),
 
@@ -222,7 +221,7 @@ export const uploadApi = {
   },
 
   getHistory: (params?: { skip?: number; limit?: number }) =>
-    client.get<PaginatedResponse<UploadHistory>>("/upload/history", {
+    client.get<UploadHistory[]>("/upload/history", {
       params,
     }),
 };
@@ -302,7 +301,7 @@ export const auditLogsApi = {
     skip?: number;
     limit?: number;
   }) =>
-    client.get<PaginatedResponse<AuditLog>>("/audit-logs", { params }),
+    client.get<AuditLog[]>("/audit-logs", { params }),
 };
 
 // ====== Batch Operations ======

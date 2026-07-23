@@ -32,6 +32,18 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function RoleRoute({ children, roles }: { children: React.ReactNode; roles: string[] }) {
+  const user = useAuthStore((state) => state.user);
+  const isLoading = useAuthStore((state) => state.isLoading);
+  if (!user || isLoading) {
+    return <PageFallback />;
+  }
+  if (!roles.includes(user.role.name)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <>{children}</>;
+}
+
 function App() {
   return (
     <Suspense fallback={<PageFallback />}>
@@ -52,8 +64,8 @@ function App() {
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/ai-assistant" element={<AIAssistant />} />
           <Route path="/reports" element={<Reports />} />
-          <Route path="/admin/users" element={<AdminUsers />} />
-          <Route path="/audit-logs" element={<AuditLogs />} />
+          <Route path="/admin/users" element={<RoleRoute roles={["admin"]}><AdminUsers /></RoleRoute>} />
+          <Route path="/audit-logs" element={<RoleRoute roles={["admin"]}><AuditLogs /></RoleRoute>} />
         </Route>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

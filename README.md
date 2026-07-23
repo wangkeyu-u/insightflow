@@ -24,6 +24,8 @@ InsightFlow 是一个企业运营分析全栈平台，将销售、客户、产�
 
 Enterprise operations analytics in one dashboard. InsightFlow brings sales, customers, products, inventory, payments, reports, audit logs, and an AI business analyst into a single full-stack platform.
 
+面试演示前请阅读：[项目深度理解与面试手册](docs/INTERVIEW_GUIDE_CN.md)。
+
 **Built for:** KPI dashboards, CSV import, business reporting, operational analytics, AI-assisted decisions.
 
 ## Tech Stack
@@ -122,7 +124,7 @@ pip install -r requirements.txt
 
 # Set up PostgreSQL, then:
 cp .env.example .env
-# Edit .env with your database credentials and OpenAI API key
+# Edit .env with your database credentials. OpenAI API key is optional.
 
 # Create tables and seed data
 python -m app.utils.seed_data
@@ -211,7 +213,7 @@ After running the seed script, these accounts are available:
 |----------|-------------|---------|
 | DATABASE_URL | PostgreSQL connection string | postgresql://insightflow:insightflow@localhost:5432/insightflow |
 | SECRET_KEY | JWT signing secret | dev-secret-key-change-me |
-| OPENAI_API_KEY | OpenAI API key | (required for AI features) |
+| OPENAI_API_KEY | Optional OpenAI API key; deterministic local analysis is used when absent | (empty) |
 | OPENAI_MODEL | OpenAI model name | gpt-4o-mini |
 | CORS_ORIGINS | Allowed frontend origins | http://localhost:5173 |
 

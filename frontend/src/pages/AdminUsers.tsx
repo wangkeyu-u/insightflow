@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/app/PageHeader";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -124,7 +125,7 @@ export default function AdminUsers() {
         email: formEmail,
         password: formPassword,
         full_name: formFullName || undefined,
-        role: formRole,
+        role_id: ROLE_OPTIONS.find((role) => role.name === formRole)?.id,
       });
       setCreateDialog(false);
       fetchUsers();
@@ -200,24 +201,26 @@ export default function AdminUsers() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold tracking-tight">User Management</h2>
-        <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />Add User</Button>
-      </div>
+      <PageHeader
+        eyebrow="Access governance"
+        title="User Management"
+        description="Provision workspace access, assign operational roles, and review account status."
+        actions={<Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />Add user</Button>}
+      />
 
       {/* Filters */}
       <Card>
         <CardContent className="flex flex-wrap items-end gap-3 p-4">
           <div className="min-w-[220px] flex-1">
-            <Label className="text-xs">Search</Label>
+            <Label className="filter-label">Search</Label>
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input className="pl-8" placeholder="Search by name or email..." value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
           </div>
           <div>
-            <Label className="text-xs">Role</Label>
-            <select className="h-9 rounded-md border bg-background px-3 text-sm" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+            <Label className="filter-label">Role</Label>
+            <select className="control-select min-w-[150px]" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
               <option value="">All Roles</option>
               <option value="admin">Admin</option>
               <option value="manager">Manager</option>
@@ -225,8 +228,8 @@ export default function AdminUsers() {
             </select>
           </div>
           <div>
-            <Label className="text-xs">Status</Label>
-            <select className="h-9 rounded-md border bg-background px-3 text-sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <Label className="filter-label">Status</Label>
+            <select className="control-select min-w-[140px]" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="">All</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
@@ -334,7 +337,7 @@ export default function AdminUsers() {
             </div>
             <div>
               <Label>Role</Label>
-              <select className="h-9 w-full rounded-md border bg-background px-3 text-sm" value={formRole} onChange={(e) => setFormRole(e.target.value)}>
+              <select className="control-select" value={formRole} onChange={(e) => setFormRole(e.target.value)}>
                 <option value="admin">Admin</option>
                 <option value="manager">Manager</option>
                 <option value="staff">Staff</option>
@@ -368,7 +371,7 @@ export default function AdminUsers() {
             </div>
             <div>
               <Label>Role</Label>
-              <select className="h-9 w-full rounded-md border bg-background px-3 text-sm" value={editRoleId} onChange={(e) => setEditRoleId(Number(e.target.value))}>
+              <select className="control-select" value={editRoleId} onChange={(e) => setEditRoleId(Number(e.target.value))}>
                 {ROLE_OPTIONS.map((r) => (
                   <option key={r.id} value={r.id}>{r.name.charAt(0).toUpperCase() + r.name.slice(1)}</option>
                 ))}

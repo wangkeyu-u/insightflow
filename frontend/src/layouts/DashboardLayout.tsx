@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   Activity,
   Boxes,
+  UserCog,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
@@ -26,7 +27,7 @@ interface NavItem {
   label: string;
   href: string;
   icon: React.ElementType;
-  adminOnly?: boolean;
+  roles?: string[];
   group: "Workspace" | "Operations" | "Intelligence";
 }
 
@@ -43,7 +44,14 @@ const navItems: NavItem[] = [
     label: "Audit Logs",
     href: "/audit-logs",
     icon: ScrollText,
-    adminOnly: true,
+    roles: ["admin"],
+    group: "Intelligence",
+  },
+  {
+    label: "User Management",
+    href: "/admin/users",
+    icon: UserCog,
+    roles: ["admin"],
     group: "Intelligence",
   },
 ];
@@ -63,10 +71,8 @@ export default function DashboardLayout() {
     navigate("/login");
   };
 
-  const isAdmin = user?.role?.name === "admin" || user?.role?.name === "manager";
-
   const filteredNavItems = navItems.filter(
-    (item) => !item.adminOnly || isAdmin,
+    (item) => !item.roles || item.roles.includes(user?.role?.name || ""),
   );
   const groups: NavItem["group"][] = ["Workspace", "Operations", "Intelligence"];
   const currentPage = navItems.find((item) => location.pathname.startsWith(item.href));

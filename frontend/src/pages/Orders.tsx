@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/app/PageHeader";
+import { useAuthStore } from "@/stores/authStore";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -32,6 +33,8 @@ interface FormItem {
 }
 
 export default function Orders() {
+  const user = useAuthStore((state) => state.user);
+  const canManage = user?.role.name === "admin" || user?.role.name === "manager";
   const [searchParams] = useSearchParams();
   const [orders, setOrders] = useState<OrderListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -218,7 +221,7 @@ export default function Orders() {
         actions={
           <>
             <Button variant="outline" onClick={handleExportOrders}><FileDown className="mr-2 h-4 w-4" />Export CSV</Button>
-            <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />New order</Button>
+            {canManage && <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />New order</Button>}
           </>
         }
       />
@@ -299,7 +302,7 @@ export default function Orders() {
       </Card>
 
       {/* Batch action bar */}
-      {selected.size > 0 && (
+      {canManage && selected.size > 0 && (
         <div className="flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 shadow-sm">
           <span className="mr-auto text-sm font-semibold text-blue-950">{selected.size} orders selected</span>
           <Button variant="destructive" size="sm" disabled={batchDeleting} onClick={handleBatchDelete}>
@@ -326,14 +329,14 @@ export default function Orders() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[40px]">
+                  {canManage && <TableHead className="w-[40px]">
                     <button onClick={() => {
                       if (selected.size === orders.length) setSelected(new Set());
                       else setSelected(new Set(orders.map(o => o.id)));
                     }}>
                       {selected.size === orders.length && orders.length > 0 ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
                     </button>
-                  </TableHead>
+                  </TableHead>}
                   <TableHead>ID</TableHead><TableHead>Customer</TableHead><TableHead>Date</TableHead>
                   <TableHead>Region</TableHead><TableHead>Salesperson</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
@@ -345,7 +348,7 @@ export default function Orders() {
                   <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">No orders found</TableCell></TableRow>
                 ) : orders.map((o) => (
                   <TableRow key={o.id}>
-                    <TableCell>
+                    {canManage && <TableCell>
                       <button onClick={() => {
                         const next = new Set(selected);
                         next.has(o.id) ? next.delete(o.id) : next.add(o.id);
@@ -353,7 +356,7 @@ export default function Orders() {
                       }}>
                         {selected.has(o.id) ? <CheckSquare className="h-4 w-4 text-blue-600" /> : <Square className="h-4 w-4 text-muted-foreground" />}
                       </button>
-                    </TableCell>
+                    </TableCell>}
                     <TableCell className="font-medium">#{o.id}</TableCell>
                     <TableCell>{o.customer_name || "—"}</TableCell>
                     <TableCell>{new Date(o.order_date).toLocaleDateString()}</TableCell>
@@ -365,8 +368,8 @@ export default function Orders() {
                     <TableCell className="text-right">
                       <div className="inline-flex items-center rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm">
                         <Button title="View order" variant="ghost" size="icon" className="icon-action h-7 w-7" onClick={async () => { const r = await ordersApi.get(o.id); setViewOrder(r.data); }}><Eye className="h-3.5 w-3.5" /></Button>
-                        <Button title="Edit order" variant="ghost" size="icon" className="icon-action h-7 w-7" onClick={() => openEdit(o.id)}><Pencil className="h-3.5 w-3.5" /></Button>
-                        <Button title="Delete order" variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:bg-red-50 hover:text-red-600" onClick={() => setDeleteId(o.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                        {canManage && <Button title="Edit order" variant="ghost" size="icon" className="icon-action h-7 w-7" onClick={() => openEdit(o.id)}><Pencil className="h-3.5 w-3.5" /></Button>}
+                        {canManage && <Button title="Delete order" variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:bg-red-50 hover:text-red-600" onClick={() => setDeleteId(o.id)}><Trash2 className="h-3.5 w-3.5" /></Button>}
                       </div>
                     </TableCell>
                   </TableRow>

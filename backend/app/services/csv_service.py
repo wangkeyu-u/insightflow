@@ -216,6 +216,12 @@ def _get_required_columns(entity_type: str) -> set:
 
 def _clean_dataframe(df: pd.DataFrame, entity_type: str) -> pd.DataFrame:
     """Clean the dataframe: fill NaN, strip whitespace, standardize types."""
+    # Optional columns are allowed by validation. Materialize them before
+    # applying defaults so a minimal, valid CSV cannot fail with KeyError.
+    for column in COLUMN_MAPPINGS[entity_type]:
+        if column not in df.columns:
+            df[column] = pd.NA
+
     # Strip whitespace from all string columns
     for col in df.columns:
         if df[col].dtype == object:
@@ -455,6 +461,7 @@ def _import_products(
                 existing.cost_price = cost_price
                 existing.current_stock = stock
                 existing.updated_at = datetime.utcnow()
+                product = existing
             else:
                 product = Product(
                     name=name,
@@ -465,6 +472,24 @@ def _import_products(
                     current_stock=stock,
                 )
                 db.add(product)
+                db.flush()
+
+            inventory = (
+                db.query(Inventory)
+                .filter(Inventory.product_id == product.id)
+                .first()
+            )
+            if inventory:
+                inventory.quantity = stock
+                inventory.last_updated = datetime.utcnow()
+            else:
+                db.add(
+                    Inventory(
+                        product_id=product.id,
+                        warehouse="Main",
+                        quantity=stock,
+                    )
+                )
 
             success += 1
         except Exception as e:
@@ -573,6 +598,17 @@ def _import_orders(
             )
             db.add(item)
 
+            customer = db.query(Customer).filter(Customer.id == customer_id).first()
+            if customer:
+                customer.total_spending = (
+                    customer.total_spending or 0.0
+                ) + order.total_amount
+                if (
+                    customer.last_purchase_date is None
+                    or order_date > customer.last_purchase_date.date()
+                ):
+                    customer.last_purchase_date = order_date
+
             success += 1
         except Exception as e:
             errors.append(f"Row {idx + 1}: {str(e)}")
@@ -666,6 +702,8 @@ def _import_inventory(
                     quantity=quantity,
                 )
                 db.add(inv)
+
+            product.current_stock = quantity
 
             success += 1
         except Exception as e:

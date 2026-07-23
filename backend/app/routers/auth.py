@@ -73,10 +73,9 @@ def register(
 ):
     """Register a new user account.
 
-    The first registered user is automatically promoted to admin regardless
-    of the requested role.  Subsequent registrations default to the requested
-    role (or 'staff' if none specified).  An existing admin can also use this
-    endpoint to create additional accounts.
+    The first registered user bootstraps the workspace as admin. All later
+    self-registrations receive the staff role; privileged roles can only be
+    assigned through the admin-only user management API.
 
     Returns 409 if the email address is already registered.
     """
@@ -90,7 +89,7 @@ def register(
 
     # Determine the role to assign
     user_count = db.query(User).count()
-    role_name = payload.role if user_count > 0 else "admin"
+    role_name = "staff" if user_count > 0 else "admin"
 
     # Get or create the role
     role = db.query(Role).filter(Role.name == role_name).first()

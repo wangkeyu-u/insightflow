@@ -27,21 +27,32 @@ def get_revenue_analytics(
 ) -> RevenueAnalytics:
     """Return monthly revenue data, optionally filtered to a specific year."""
     target_year = year or date.today().year
+    year_start = date(target_year, 1, 1)
+    year_end = date(target_year, 12, 31)
+    month_bucket = (
+        func.strftime("%Y-%m-01", Order.order_date)
+        if db.bind is not None and db.bind.dialect.name == "sqlite"
+        else func.date_trunc("month", Order.order_date)
+    )
 
     results = (
         db.query(
-            func.date_trunc("month", Order.order_date).label("month"),
+            month_bucket.label("month"),
             func.coalesce(func.sum(Order.total_amount), 0.0).label("revenue"),
         )
-        .filter(func.extract("year", Order.order_date) == target_year)
-        .group_by(func.date_trunc("month", Order.order_date))
-        .order_by(func.date_trunc("month", Order.order_date))
+        .filter(Order.order_date >= year_start, Order.order_date <= year_end)
+        .group_by(month_bucket)
+        .order_by(month_bucket)
         .all()
     )
 
     monthly_data = [
         MonthRevenue(
-            month=row.month.strftime("%Y-%m"),
+            month=(
+                row.month[:7]
+                if isinstance(row.month, str)
+                else row.month.strftime("%Y-%m")
+            ),
             revenue=row.revenue,
         )
         for row in results
@@ -52,7 +63,7 @@ def get_revenue_analytics(
     # Average order value across all orders in the year
     avg_order_value = (
         db.query(func.coalesce(func.avg(Order.total_amount), 0.0))
-        .filter(func.extract("year", Order.order_date) == target_year)
+        .filter(Order.order_date >= year_start, Order.order_date <= year_end)
         .scalar()
     )
 
@@ -266,6 +277,8 @@ def get_sales_targets(
 ) -> List[SalesTargetStatus]:
     """Compare actual regional revenue against sales targets."""
     target_year = year or date.today().year
+    year_start = date(target_year, 1, 1)
+    year_end = date(target_year, 12, 31)
 
     # Get targets for the year
     targets = (
@@ -283,7 +296,7 @@ def get_sales_targets(
             Order.region,
             func.coalesce(func.sum(Order.total_amount), 0.0),
         )
-        .filter(func.extract("year", Order.order_date) == target_year)
+        .filter(Order.order_date >= year_start, Order.order_date <= year_end)
         .group_by(Order.region)
         .all()
     )

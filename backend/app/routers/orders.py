@@ -4,12 +4,13 @@ from datetime import date
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import String, or_
+from sqlalchemy import String, func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.dependencies import get_db, require_role
 from app.models.customer import Customer
 from app.models.order import Order, OrderItem
+from app.models.inventory import Payment, Shipment
 from app.models.product import Product
 from app.models.user import User
 from app.schemas.order import (
@@ -288,6 +289,7 @@ def update_order(
             detail=f"Order with id {order_id} not found",
         )
 
+    original_customer_id = order.customer_id
     if payload.customer_id is not None:
         customer = db.query(Customer).filter(Customer.id == payload.customer_id).first()
         if customer is None:
@@ -296,6 +298,33 @@ def update_order(
                 detail=f"Customer with id {payload.customer_id} not found",
             )
         order.customer_id = payload.customer_id
+
+        if payload.customer_id != original_customer_id:
+            previous_customer = db.query(Customer).filter(Customer.id == original_customer_id).first()
+            if previous_customer:
+                previous_customer.total_spending = max(
+                    0.0,
+                    (previous_customer.total_spending or 0.0) - (order.total_amount or 0.0),
+                )
+                previous_customer.last_purchase_date = (
+                    db.query(func.max(Order.order_date))
+                    .filter(
+                        Order.customer_id == original_customer_id,
+                        Order.id != order.id,
+                    )
+                    .scalar()
+                )
+            customer.total_spending = (
+                customer.total_spending or 0.0
+            ) + (order.total_amount or 0.0)
+            latest_date = (
+                db.query(func.max(Order.order_date))
+                .filter(Order.customer_id == customer.id)
+                .scalar()
+            )
+            customer.last_purchase_date = max(
+                value for value in (latest_date, order.order_date) if value is not None
+            )
 
     if payload.region is not None:
         order.region = payload.region
@@ -348,7 +377,14 @@ def delete_order(
     customer = db.query(Customer).filter(Customer.id == order.customer_id).first()
     if customer and order.total_amount:
         customer.total_spending = max(0.0, (customer.total_spending or 0.0) - order.total_amount)
+        customer.last_purchase_date = (
+            db.query(func.max(Order.order_date))
+            .filter(Order.customer_id == customer.id, Order.id != order.id)
+            .scalar()
+        )
 
+    db.query(Payment).filter(Payment.order_id == order_id).delete(synchronize_session=False)
+    db.query(Shipment).filter(Shipment.order_id == order_id).delete(synchronize_session=False)
     db.delete(order)
     db.commit()
 

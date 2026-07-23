@@ -180,9 +180,9 @@ def create_product(
         category=payload.category,
         supplier_id=payload.supplier_id,
         unit_price=payload.unit_price,
-        cost_price=payload.cost_price or 0.0,
-        current_stock=payload.current_stock or 0,
-        reorder_level=payload.reorder_level or 10,
+        cost_price=payload.cost_price if payload.cost_price is not None else 0.0,
+        current_stock=payload.current_stock if payload.current_stock is not None else 0,
+        reorder_level=payload.reorder_level if payload.reorder_level is not None else 10,
         status="active",
     )
     db.add(new_product)
