@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import ReactECharts from "echarts-for-react";
 import {
   DollarSign,
   ShoppingCart,
@@ -11,6 +10,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { dashboardApi } from "@/api/endpoints";
+import EChart from "@/components/charts/EChart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -89,12 +89,12 @@ export default function Dashboard() {
   }
 
   const kpis = [
-    { title: "Total Revenue", value: summary ? fmt(summary.total_revenue) : "$0", icon: DollarSign, color: "text-green-600", bg: "bg-green-50", path: "/analytics" },
-    { title: "Total Orders", value: summary ? fmtN(summary.total_orders) : "0", icon: ShoppingCart, color: "text-blue-600", bg: "bg-blue-50", path: "/orders" },
-    { title: "Total Customers", value: summary ? fmtN(summary.total_customers) : "0", icon: Users, color: "text-purple-600", bg: "bg-purple-50", path: "/customers" },
-    { title: "Total Products", value: summary ? fmtN(summary.total_products) : "0", icon: Package, color: "text-orange-600", bg: "bg-orange-50", path: "/products" },
-    { title: "Overdue Amount", value: summary ? fmt(summary.overdue_amount) : "$0", icon: AlertTriangle, color: summary && summary.overdue_amount > 0 ? "text-red-600" : "text-gray-400", bg: summary && summary.overdue_amount > 0 ? "bg-red-50" : "bg-gray-50", path: "/orders?payment=overdue" },
-    { title: "Low Stock", value: summary ? fmtN(summary.low_stock_count) : "0", icon: TrendingDown, color: summary && summary.low_stock_count > 0 ? "text-red-600" : "text-gray-400", bg: summary && summary.low_stock_count > 0 ? "bg-red-50" : "bg-gray-50", path: "/inventory" },
+    { title: "Booked Revenue", value: summary ? fmt(summary.total_revenue) : "$0", icon: DollarSign, color: "text-emerald-600", bg: "bg-emerald-50", path: "/analytics" },
+    { title: "Orders", value: summary ? fmtN(summary.total_orders) : "0", icon: ShoppingCart, color: "text-blue-600", bg: "bg-blue-50", path: "/orders" },
+    { title: "Active Accounts", value: summary ? fmtN(summary.total_customers) : "0", icon: Users, color: "text-violet-600", bg: "bg-violet-50", path: "/customers" },
+    { title: "Catalog SKUs", value: summary ? fmtN(summary.total_products) : "0", icon: Package, color: "text-orange-600", bg: "bg-orange-50", path: "/products" },
+    { title: "AR at Risk", value: summary ? fmt(summary.overdue_amount) : "$0", icon: AlertTriangle, color: summary && summary.overdue_amount > 0 ? "text-red-600" : "text-gray-400", bg: summary && summary.overdue_amount > 0 ? "bg-red-50" : "bg-gray-50", path: "/orders?payment=overdue" },
+    { title: "Reorder Alerts", value: summary ? fmtN(summary.low_stock_count) : "0", icon: TrendingDown, color: summary && summary.low_stock_count > 0 ? "text-amber-600" : "text-gray-400", bg: summary && summary.low_stock_count > 0 ? "bg-amber-50" : "bg-gray-50", path: "/inventory" },
   ];
 
   const trendOpt = {
@@ -135,7 +135,13 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Executive Operations</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Commercial performance, cash collection, and inventory health in one view.</p>
+        </div>
+        <Badge variant="outline" className="font-normal">Updated {new Date().toLocaleDateString()}</Badge>
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {kpis.map((k) => (
@@ -155,29 +161,29 @@ export default function Dashboard() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base">Revenue Trend</CardTitle></CardHeader>
-          <CardContent><ReactECharts option={trendOpt} style={{ height: 300 }} onEvents={{ click: () => navigate("/orders") }} /></CardContent>
+          <CardHeader className="pb-2"><CardTitle className="text-base">12-Month Revenue Trend</CardTitle></CardHeader>
+          <CardContent><EChart option={trendOpt} style={{ height: 300 }} onEvents={{ click: () => navigate("/orders") }} /></CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base">Payment Status</CardTitle></CardHeader>
-          <CardContent><ReactECharts option={pieOpt} style={{ height: 300 }} onEvents={{ click: (p: Record<string, string>) => navigate(`/orders?payment=${encodeURIComponent(p.name || "")}`) }} /></CardContent>
+          <CardHeader className="pb-2"><CardTitle className="text-base">Recent Payment Mix</CardTitle></CardHeader>
+          <CardContent><EChart option={pieOpt} style={{ height: 300 }} onEvents={{ click: (p: Record<string, string>) => navigate(`/orders?payment=${encodeURIComponent(p.name || "")}`) }} /></CardContent>
         </Card>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base">Top Products by Revenue</CardTitle></CardHeader>
-          <CardContent><ReactECharts option={prodOpt} style={{ height: 300 }} onEvents={{ click: () => navigate("/products") }} /></CardContent>
+          <CardContent><EChart option={prodOpt} style={{ height: 300 }} onEvents={{ click: () => navigate("/products") }} /></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base">Regional Performance</CardTitle></CardHeader>
-          <CardContent><ReactECharts option={regOpt} style={{ height: 300 }} onEvents={{ click: (p: Record<string, string>) => navigate(`/customers?region=${encodeURIComponent(p.name || "")}`) }} /></CardContent>
+          <CardContent><EChart option={regOpt} style={{ height: 300 }} onEvents={{ click: (p: Record<string, string>) => navigate(`/customers?region=${encodeURIComponent(p.name || "")}`) }} /></CardContent>
         </Card>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          <CardHeader className="pb-2"><CardTitle className="text-base">Recent Orders</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-base">Latest Orders</CardTitle></CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
@@ -205,14 +211,14 @@ export default function Dashboard() {
         </Card>
 
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base">Alerts</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-base">Operational Alerts</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-3">
               {alerts.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No active alerts</p>
               ) : alerts.map((a, i) => (
                 <div key={i} className={`rounded-lg border p-3 ${a.severity === "critical" ? "border-red-200 bg-red-50" : a.severity === "warning" ? "border-yellow-200 bg-yellow-50" : "border-blue-200 bg-blue-50"}`}>
-                  <Badge variant={a.severity === "critical" ? "destructive" : "secondary"}>{a.alert_type}</Badge>
+                  <Badge variant={a.severity === "critical" ? "destructive" : "secondary"}>{a.alert_type.replace(/_/g, " ")}</Badge>
                   <p className="mt-1 text-sm">{a.message}</p>
                 </div>
               ))}
@@ -222,7 +228,7 @@ export default function Dashboard() {
       </div>
 
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Top Customers</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-base">Strategic Accounts</CardTitle></CardHeader>
         <CardContent>
           <Table>
             <TableHeader>

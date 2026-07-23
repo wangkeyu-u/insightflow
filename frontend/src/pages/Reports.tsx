@@ -1,16 +1,19 @@
 import { useState, useRef } from "react";
-import { Download, Upload, FileText, FileSpreadsheet, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Download, FileText, FileSpreadsheet, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { exportApi, uploadApi, aiApi } from "@/api/endpoints";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { PageHeader } from "@/components/app/PageHeader";
+import { useAuthStore } from "@/stores/authStore";
 import type { ImportSummary, AIResponse } from "@/types";
 
 type ExportType = "sales" | "customers" | "inventory" | "report";
 type UploadType = "orders" | "customers" | "products" | "inventory";
 
 export default function Reports() {
+  const user = useAuthStore((state) => state.user);
+  const canManage = user?.role.name === "admin" || user?.role.name === "manager";
   const [exporting, setExporting] = useState<ExportType | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadType, setUploadType] = useState<UploadType>("orders");
@@ -96,7 +99,11 @@ export default function Reports() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold tracking-tight">Reports & Export</h2>
+      <PageHeader
+        eyebrow="Reporting workspace"
+        title="Reports & Export"
+        description="Package operational evidence for review, generate a grounded business brief, or import governed source data."
+      />
 
       {/* Export Section */}
       <div>
@@ -166,7 +173,7 @@ export default function Reports() {
       </div>
 
       {/* Upload Section */}
-      <div>
+      {canManage && <div>
         <h3 className="mb-3 text-lg font-medium">Import CSV Data</h3>
         <Card>
           <CardContent className="p-4">
@@ -243,7 +250,7 @@ export default function Reports() {
             )}
           </CardContent>
         </Card>
-      </div>
+      </div>}
     </div>
   );
 }

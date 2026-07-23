@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import ReactECharts from "echarts-for-react";
 import { TrendingUp, Users, DollarSign, Loader2 } from "lucide-react";
 import { analyticsApi } from "@/api/endpoints";
+import EChart from "@/components/charts/EChart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -124,17 +124,17 @@ export default function Analytics() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base">Monthly Revenue Trend</CardTitle></CardHeader>
-          <CardContent><ReactECharts option={revOpt} style={{ height: 320 }} /></CardContent>
+          <CardContent><EChart option={revOpt} style={{ height: 320 }} /></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base">Product Performance</CardTitle></CardHeader>
-          <CardContent><ReactECharts option={prodOpt} style={{ height: 320 }} /></CardContent>
+          <CardContent><EChart option={prodOpt} style={{ height: 320 }} /></CardContent>
         </Card>
       </div>
 
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-base">Regional Performance</CardTitle></CardHeader>
-        <CardContent><ReactECharts option={regOpt} style={{ height: 320 }} /></CardContent>
+        <CardContent><EChart option={regOpt} style={{ height: 320 }} /></CardContent>
       </Card>
 
       {/* Tables */}
@@ -174,7 +174,7 @@ export default function Analytics() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <div className="h-2 w-24 rounded-full bg-gray-200">
-                          <div className="h-2 rounded-full bg-blue-500" style={{ width: `${Math.min(100, t.completion_rate * 100)}%` }} />
+                          <div className="h-2 rounded-full bg-blue-500" style={{ width: `${Math.min(100, t.completion_rate)}%` }} />
                         </div>
                         <span className="text-xs">{pct(t.completion_rate)}</span>
                       </div>

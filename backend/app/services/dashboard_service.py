@@ -30,11 +30,12 @@ def get_summary(db: Session) -> DashboardSummary:
     total_customers = db.query(func.count(Customer.id)).scalar() or 0
     total_products = db.query(func.count(Product.id)).scalar() or 0
 
-    # Overdue payments: status != paid and due_date is in the past
+    # Only explicitly overdue receivables belong in AR-at-risk. Pending and
+    # legacy terminal statuses must not be treated as delinquent.
     overdue_amount = (
         db.query(func.coalesce(func.sum(Payment.amount), 0.0))
         .filter(
-            Payment.status != "paid",
+            Payment.status == "overdue",
             Payment.due_date < date.today(),
         )
         .scalar()
@@ -63,21 +64,30 @@ def get_summary(db: Session) -> DashboardSummary:
 
 def get_sales_trend(db: Session, months: int = 12) -> List[SalesTrendPoint]:
     """Return monthly revenue and order count for the last N months."""
+    month_bucket = (
+        func.strftime("%Y-%m-01", Order.order_date)
+        if db.bind is not None and db.bind.dialect.name == "sqlite"
+        else func.date_trunc("month", Order.order_date)
+    )
     results = (
         db.query(
-            func.date_trunc("month", Order.order_date).label("month"),
+            month_bucket.label("month"),
             func.coalesce(func.sum(Order.total_amount), 0.0).label("revenue"),
             func.count(Order.id).label("orders"),
         )
         .filter(Order.order_date >= _months_ago(months))
-        .group_by(func.date_trunc("month", Order.order_date))
-        .order_by(func.date_trunc("month", Order.order_date))
+        .group_by(month_bucket)
+        .order_by(month_bucket)
         .all()
     )
 
     return [
         SalesTrendPoint(
-            month=row.month.strftime("%Y-%m"),
+            month=(
+                row.month[:7]
+                if isinstance(row.month, str)
+                else row.month.strftime("%Y-%m")
+            ),
             revenue=row.revenue,
             orders=row.orders,
         )
@@ -220,7 +230,7 @@ def get_alerts(db: Session) -> List[DashboardAlert]:
         .join(Order, Payment.order_id == Order.id)
         .join(Customer, Order.customer_id == Customer.id)
         .filter(
-            Payment.status != "paid",
+            Payment.status == "overdue",
             Payment.due_date < date.today(),
         )
         .limit(10)

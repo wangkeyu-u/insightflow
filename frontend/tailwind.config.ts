@@ -52,12 +52,16 @@ const config: Config = {
       },
       fontFamily: {
         sans: [
-          "Inter",
+          "Avenir Next",
+          "Segoe UI",
           "ui-sans-serif",
           "system-ui",
           "-apple-system",
           "sans-serif",
         ],
+      },
+      boxShadow: {
+        card: "0 1px 2px rgb(15 23 42 / 0.03), 0 8px 24px rgb(15 23 42 / 0.035)",
       },
     },
   },

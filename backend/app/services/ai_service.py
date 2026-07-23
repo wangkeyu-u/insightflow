@@ -34,6 +34,99 @@ RULES:
 Always be professional, data-driven, and actionable in your recommendations."""
 
 
+def _context_value(context: str, label: str) -> str:
+    """Read a formatted metric from the trusted, server-generated context."""
+    prefix = f"- {label}: "
+    for line in context.splitlines():
+        if line.startswith(prefix):
+            return line.removeprefix(prefix)
+    return "not available"
+
+
+def _context_section(context: str, heading: str) -> list[str]:
+    """Return display-ready rows from one context section."""
+    lines = context.splitlines()
+    try:
+        start = lines.index(heading) + 1
+    except ValueError:
+        return []
+    rows = []
+    for line in lines[start:]:
+        if not line.strip() or not line.startswith("  "):
+            break
+        rows.append(line.strip().removeprefix("- "))
+    return rows
+
+
+def _local_analysis(user_message: str, context: str) -> AIResponse:
+    """Provide an evidence-backed fallback when a hosted model is unavailable.
+
+    This keeps interview and local-development workflows functional without
+    pretending that the deterministic response came from a language model.
+    """
+    total_revenue = _context_value(context, "Total Revenue")
+    total_orders = _context_value(context, "Total Orders")
+    monthly_revenue = _context_value(context, "This Month Revenue")
+    top_products = _context_section(context, "Top Products by Revenue:")
+    regions = _context_section(context, "Revenue by Region:")
+    low_stock = _context_section(context, "Low Stock Alerts:")
+    prompt = user_message.lower()
+
+    if "inventory" in prompt or "stock" in prompt:
+        short_answer = (
+            f"{len(low_stock)} SKUs are at or below their reorder points and "
+            "should be prioritized by customer impact and replenishment lead time."
+        )
+        evidence = low_stock or ["No products are currently below their reorder point."]
+        actions = [
+            "Create purchase orders for the flagged SKUs and confirm supplier lead times",
+            "Reserve constrained stock for open enterprise orders",
+            "Review reorder points weekly against trailing demand",
+        ]
+    elif "trend" in prompt or "revenue" in prompt:
+        short_answer = (
+            f"The portfolio has booked {total_revenue} across {total_orders} orders, "
+            f"with {monthly_revenue} recorded this month."
+        )
+        evidence = [
+            f"Booked revenue: {total_revenue}",
+            f"Order volume: {total_orders}",
+            f"Current-month revenue: {monthly_revenue}",
+        ] + regions[:2]
+        actions = [
+            "Compare current-month pace with the prior month before changing the forecast",
+            "Protect momentum in the leading region with account-level follow-ups",
+            "Review overdue receivables alongside revenue growth",
+        ]
+    else:
+        short_answer = (
+            f"Current performance totals {total_revenue} from {total_orders} orders; "
+            "the strongest commercial and operational signals are summarized below."
+        )
+        evidence = [
+            f"Current-month revenue: {monthly_revenue}",
+            *(regions[:1] or []),
+            *(top_products[:1] or []),
+            f"Low-stock SKUs: {len(low_stock)}",
+        ]
+        actions = [
+            "Follow up on regional target gaps with the responsible sales owners",
+            "Escalate overdue receivables before extending additional credit",
+            "Replenish low-stock products tied to active customer demand",
+        ]
+
+    return AIResponse(
+        short_answer=short_answer,
+        data_evidence=evidence,
+        reasoning=(
+            "This local fallback uses deterministic aggregates generated directly "
+            "from the operational database; no external model inference was required."
+        ),
+        suggested_actions=actions,
+        confidence="high",
+    )
+
+
 def _get_client() -> OpenAI:
     """Get or create the OpenAI client."""
     global _client
@@ -153,6 +246,9 @@ def _build_business_context(db: Session) -> str:
 
 def _call_openai(user_message: str, context: str) -> AIResponse:
     """Call OpenAI API with the system prompt and parse the response."""
+    if not settings.OPENAI_API_KEY:
+        return _local_analysis(user_message, context)
+
     client = _get_client()
 
     try:

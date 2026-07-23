@@ -104,3 +104,11 @@ def test_create_and_get_order(client):
     get_resp = client.get(f"/orders/{data['id']}")
     assert get_resp.status_code == 200
     assert get_resp.json()["id"] == data["id"]
+
+    # Search works across customer name, product name, and order ID.
+    for search_term in ("Order Customer", "Test Widget", str(data["id"])):
+        search_resp = client.get("/orders", params={"search": search_term})
+        assert search_resp.status_code == 200
+        search_data = search_resp.json()
+        assert search_data["total"] == 1
+        assert search_data["items"][0]["id"] == data["id"]

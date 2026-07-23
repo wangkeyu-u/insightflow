@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/app/PageHeader";
+import { useAuthStore } from "@/stores/authStore";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import type { Product } from "@/types";
@@ -16,6 +18,8 @@ interface FormData { name: string; category: string; supplier_id: string; unit_p
 const emptyForm: FormData = { name: "", category: "", supplier_id: "", unit_price: "", cost_price: "", current_stock: "0", reorder_level: "10" };
 
 export default function Products() {
+  const user = useAuthStore((state) => state.user);
+  const canManage = user?.role.name === "admin" || user?.role.name === "manager";
   const [items, setItems] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -101,30 +105,32 @@ export default function Products() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold tracking-tight">Products</h2>
-        <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />Add Product</Button>
-      </div>
+      <PageHeader
+        eyebrow="Catalog operations"
+        title="Products"
+        description="Maintain commercial SKUs, supplier ownership, pricing, and replenishment thresholds."
+        actions={canManage && <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />Add product</Button>}
+      />
 
       <Card>
         <CardContent className="flex flex-wrap items-end gap-3 p-4">
           <div className="min-w-[200px] flex-1">
-            <Label className="text-xs">Search</Label>
+            <Label className="filter-label">Search</Label>
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input className="pl-8" placeholder="Product name..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} />
             </div>
           </div>
           <div>
-            <Label className="text-xs">Category</Label>
-            <select className="h-9 rounded-md border bg-background px-3 text-sm" value={catFilter} onChange={(e) => { setCatFilter(e.target.value); setPage(0); }}>
+            <Label className="filter-label">Category</Label>
+            <select className="control-select min-w-[180px]" value={catFilter} onChange={(e) => { setCatFilter(e.target.value); setPage(0); }}>
               <option value="">All</option>
-              {["Electronics", "Office Supplies", "Furniture", "Food & Beverage", "Clothing"].map((c) => <option key={c} value={c}>{c}</option>)}
+              {["Computing", "Displays", "Workspace", "Accessories", "Collaboration", "Networking", "IT Operations"].map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
           <div>
-            <Label className="text-xs">Status</Label>
-            <select className="h-9 rounded-md border bg-background px-3 text-sm" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}>
+            <Label className="filter-label">Status</Label>
+            <select className="control-select min-w-[150px]" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}>
               <option value="">All</option>
               <option value="active">Active</option>
               <option value="discontinued">Discontinued</option>
@@ -135,7 +141,7 @@ export default function Products() {
       </Card>
 
       {/* Batch action bar */}
-      {selected.size > 0 && (
+      {canManage && selected.size > 0 && (
         <div className="flex items-center gap-3 rounded-lg border bg-blue-50 p-3">
           <span className="text-sm font-medium">{selected.size} selected</span>
           <Button variant="destructive" size="sm" disabled={batchDeleting} onClick={handleBatchDelete}>
@@ -152,18 +158,18 @@ export default function Products() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[40px]">
+                  {canManage && <TableHead className="w-[40px]">
                     <button onClick={() => {
                       if (selected.size === items.length) setSelected(new Set());
                       else setSelected(new Set(items.map(p => p.id)));
                     }}>
                       {selected.size === items.length && items.length > 0 ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
                     </button>
-                  </TableHead>
+                  </TableHead>}
                   <TableHead>Name</TableHead><TableHead>Category</TableHead><TableHead>Supplier</TableHead>
                   <TableHead className="text-right">Unit Price</TableHead><TableHead className="text-right">Cost</TableHead>
                   <TableHead className="text-right">Stock</TableHead><TableHead className="text-right">Reorder</TableHead>
-                  <TableHead>Status</TableHead><TableHead>Actions</TableHead>
+                  <TableHead>Status</TableHead><TableHead className="sticky right-0 bg-slate-50 text-right shadow-[-8px_0_12px_-12px_rgb(15_23_42/0.3)]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -173,7 +179,7 @@ export default function Products() {
                   const lowStock = p.current_stock <= p.reorder_level;
                   return (
                     <TableRow key={p.id}>
-                      <TableCell>
+                      {canManage && <TableCell>
                         <button onClick={() => {
                           const next = new Set(selected);
                           next.has(p.id) ? next.delete(p.id) : next.add(p.id);
@@ -181,7 +187,7 @@ export default function Products() {
                         }}>
                           {selected.has(p.id) ? <CheckSquare className="h-4 w-4 text-blue-600" /> : <Square className="h-4 w-4 text-muted-foreground" />}
                         </button>
-                      </TableCell>
+                      </TableCell>}
                       <TableCell className="font-medium">{p.name}</TableCell>
                       <TableCell>{p.category || "—"}</TableCell>
                       <TableCell>{p.supplier?.name || "—"}</TableCell>
@@ -195,10 +201,12 @@ export default function Products() {
                         {lowStock && <Badge variant="destructive" className="mr-1">Low</Badge>}
                         <Badge variant={p.status === "active" ? "default" : "secondary"}>{p.status}</Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => setDeleteId(p.id)}><Trash2 className="h-4 w-4" /></Button>
+                      <TableCell className="sticky right-0 bg-white text-right shadow-[-8px_0_12px_-12px_rgb(15_23_42/0.3)]">
+                        <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm">
+                          {canManage ? <>
+                            <Button title="Edit product" variant="ghost" size="icon" className="icon-action h-7 w-7" onClick={() => openEdit(p)}><Pencil className="h-3.5 w-3.5" /></Button>
+                            <Button title="Delete product" variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:bg-red-50 hover:text-red-600" onClick={() => setDeleteId(p.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                          </> : <span className="px-2 text-xs text-muted-foreground">Read only</span>}
                         </div>
                       </TableCell>
                     </TableRow>

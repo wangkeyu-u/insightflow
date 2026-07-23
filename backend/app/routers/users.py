@@ -109,6 +109,18 @@ def update_user(
             detail=f"User with id {user_id} not found",
         )
 
+    if user.id == current_user.id and (
+        payload.is_active is False
+        or (
+            payload.role_id is not None
+            and payload.role_id != current_user.role_id
+        )
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot deactivate or change the role of your own account",
+        )
+
     if payload.email is not None:
         dup = db.query(User).filter(User.email == payload.email, User.id != user_id).first()
         if dup:
@@ -165,6 +177,12 @@ def delete_user(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User with id {user_id} not found",
+        )
+
+    if user.id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot deactivate your own account",
         )
 
     user.is_active = False
