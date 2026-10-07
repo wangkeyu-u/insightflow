@@ -26,7 +26,7 @@ docker compose exec backend python -m app.utils.seed_data
 
 种子账号包括 `admin@insightflow.com`、`manager@insightflow.com` 和 `staff1@insightflow.com`，密码均为 `password123`。种子记录是合成的经营数据，不能代表企业实施成果。
 
-Compose 中的数据库和登录配置适合本地开发。根目录 `.env` 不会自动把所有设置传入容器；尤其是模型 Key 和模型名，需在 backend 服务的 environment/env_file 中显式提供。
+Compose 中的数据库和登录配置适合本地开发。根目录 `.env` 不会自动把所有设置传入容器。模型 Key 和模型名可填写到 `backend/.env`（后端挂载目录中的配置），或在 backend 服务的 `environment` / `env_file` 中显式提供。
 
 ## 开发与结构
 
